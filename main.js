@@ -82,9 +82,52 @@ const player = new THREE.Mesh(
     new THREE.BoxGeometry(1, 2, 1),
     new THREE.MeshStandardMaterial({ color: 0xff0000 })
 );
-player.position.y = 1.1;
+player.position.y = 1;
 player.castShadow = true;
 scene.add(player);
+
+// --- CONTROLES ---
+const keys = {
+    w: false,
+    a: false,
+    s: false,
+    d: false
+};
+
+window.addEventListener('keydown', (e) => {
+    if (keys.hasOwnProperty(e.key.toLowerCase())) {
+        keys[e.key.toLowerCase()] = true;
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    if (keys.hasOwnProperty(e.key.toLowerCase())) {
+        keys[e.key.toLowerCase()] = false;
+    }
+});
+
+const playerSpeed = 0.1;
+
+function updatePlayer() {
+    const moveX = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
+    const moveZ = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
+
+    if (moveX !== 0 || moveZ !== 0) {
+        // Normalizar vetor de movimento para velocidade diagonal não ser maior
+        const length = Math.sqrt(moveX * moveX + moveZ * moveZ);
+        player.position.x += (moveX / length) * playerSpeed;
+        player.position.z += (moveZ / length) * playerSpeed;
+
+        // Rotacionar o player para a direção do movimento
+        const targetAngle = Math.atan2(moveX, moveZ);
+        player.rotation.y = targetAngle;
+    }
+
+    // Fazer a câmera seguir o jogador (opcional mas bom para o RPG)
+    camera.position.x = player.position.x + 8;
+    camera.position.z = player.position.z + 8;
+    camera.lookAt(player.position);
+}
 
 // Algumas árvores espalhadas
 function createTree(x, z) {
@@ -178,8 +221,7 @@ function animate() {
     requestAnimationFrame(animate);
 
     updateEnvironment();
-
-    player.rotation.y += 0.01;
+    updatePlayer();
 
     renderer.render(scene, camera);
 }

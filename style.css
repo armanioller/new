@@ -9,3 +9,59 @@ body {
     height: 100vh;
     display: block;
 }
+
+/* UI Styles */
+#ui-layer {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: white;
+    pointer-events: none;
+}
+
+.ui-button {
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid white;
+    color: white;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    pointer-events: auto;
+    font-size: 20px;
+}
+
+#settings-menu {
+    position: absolute;
+    top: 70px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid #555;
+    padding: 20px;
+    border-radius: 10px;
+    display: none;
+    pointer-events: auto;
+    width: 250px;
+}
+
+#settings-menu h3 {
+    margin-top: 0;
+}
+
+.setting-row {
+    margin-bottom: 15px;
+}
+
+.setting-row label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+input[type="range"] {
+    width: 100%;
+}
+
+#time-display {
+    font-weight: bold;
+    color: #ffd700;
+}

@@ -3,177 +3,215 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RPG Low-Poly</title>
+    <title>Harvest Frontier - Low Poly RPG</title>
     <link rel="stylesheet" href="style.css">
-    <script type="importmap">
-        {
-          "imports": {
-            "three": "https://unpkg.com/three@0.185.1/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.185.1/examples/jsm/"
-          }
-        }
-    </script>
 </head>
 <body>
     <canvas id="game-canvas"></canvas>
 
     <div id="ui-layer">
-        <div id="inventory-hud">
-            <div class="resource-item">🪵 <span id="count-wood">0</span></div>
-            <div class="resource-item">🪨 <span id="count-stone">0</span></div>
+        <!-- Top Left: Stats & Inventory -->
+        <div id="hud-top-left" class="hud-panel">
+            <div class="hud-header">Mochila</div>
+            <div class="resource-container">
+                <div class="resource-item">
+                    <span class="icon">🪵</span>
+                    <span id="count-wood" class="value">0</span>
+                </div>
+                <div class="resource-item">
+                    <span class="icon">🪨</span>
+                    <span id="count-stone" class="value">0</span>
+                </div>
+            </div>
         </div>
 
-        <button id="settings-toggle" class="ui-button">⚙️ Configurações</button>
+        <!-- Top Center: Global Time -->
+        <div id="hud-top-center" class="hud-panel time-panel">
+            <span id="time-display">12:00</span>
+        </div>
 
-        <div id="settings-menu">
+        <!-- Right Side: Settings Menu (Sidebar) -->
+        <button id="settings-toggle" class="ui-icon-button">⚙️</button>
+
+        <div id="settings-menu" class="sidebar">
+            <div class="sidebar-header">
+                <h2>Configurações</h2>
+            </div>
+
             <div class="tabs">
                 <button class="tab-btn active" data-tab="tab-ambiente">Ambiente</button>
                 <button class="tab-btn" data-tab="tab-camera">Câmera</button>
                 <button class="tab-btn" data-tab="tab-terreno">Terreno</button>
-                <button class="tab-btn" data-tab="tab-presets">Presets</button>
+                <button class="tab-btn" data-tab="tab-presets">Sistema</button>
             </div>
 
-            <div id="tab-ambiente" class="tab-content active">
-                <div class="settings-section">
-                    <div class="setting-row">
-                        <label><input type="checkbox" id="real-time-toggle" checked> Sincronizar Tempo Real (Global)</label>
-                    </div>
-                    <div class="setting-row">
-                        <label>Hora: <span id="time-display">12:00</span></label>
-                        <div class="slider-container">
-                            <input type="range" id="time-slider" min="0" max="24" step="0.01" value="12">
-                            <div class="slider-labels">
-                                <span>00h</span>
-                                <span>12h</span>
-                                <span>24h</span>
+            <div class="sidebar-content">
+                <div id="tab-ambiente" class="tab-content active">
+                    <div class="settings-group">
+                        <h3>Controle do Tempo</h3>
+                        <div class="setting-row">
+                            <label class="switch">
+                                <input type="checkbox" id="real-time-toggle">
+                                <span class="slider round"></span>
+                            </label>
+                            <span>Tempo Real (UTC)</span>
+                        </div>
+                        <div class="setting-row">
+                            <label class="switch">
+                                <input type="checkbox" id="time-freeze-toggle">
+                                <span class="slider round"></span>
+                            </label>
+                            <span>Congelar Tempo</span>
+                        </div>
+                        <div id="manual-time-controls" style="display: none;">
+                            <div class="setting-row">
+                                <label>Hora do Dia</label>
+                                <input type="range" id="time-slider" min="0" max="24" step="0.01" value="12">
+                            </div>
+                            <div class="setting-row">
+                                <label>Velocidade</label>
+                                <input type="range" id="time-speed" min="0" max="10" step="0.1" value="1">
                             </div>
                         </div>
                     </div>
-                    <div id="manual-time-controls" style="display: none;">
-                        <div class="setting-row">
-                            <label>Velocidade do Tempo</label>
-                            <input type="range" id="time-speed" min="0" max="10" step="0.1" value="1">
+
+                    <div class="settings-group">
+                        <h3>Cores do Céu</h3>
+                        <div class="color-grid">
+                            <div class="color-item">
+                                <label>Noite</label>
+                                <input type="color" id="color-midnight" value="#020205">
+                            </div>
+                            <div class="color-item">
+                                <label>Alvorada</label>
+                                <input type="color" id="color-dawn" value="#ffa07a">
+                            </div>
+                            <div class="color-item">
+                                <label>Dia</label>
+                                <input type="color" id="color-noon" value="#87ceeb">
+                            </div>
+                            <div class="color-item">
+                                <label>Sunset</label>
+                                <input type="color" id="color-sunset" value="#ff4500">
+                            </div>
                         </div>
                     </div>
-                    <h4>Cores do Céu</h4>
-                    <div class="setting-row">
-                        <label>Meia Noite</label>
-                        <input type="color" id="color-midnight" value="#020205">
-                    </div>
-                    <div class="setting-row">
-                        <label>Alvorada</label>
-                        <input type="color" id="color-dawn" value="#ffa07a">
-                    </div>
-                    <div class="setting-row">
-                        <label>Meio Dia</label>
-                        <input type="color" id="color-noon" value="#87ceeb">
-                    </div>
-                    <div class="setting-row">
-                        <label>Entardecer</label>
-                        <input type="color" id="color-sunset" value="#ff4500">
+                </div>
+
+                <div id="tab-camera" class="tab-content">
+                    <div class="settings-group">
+                        <h3>Visão</h3>
+                        <div class="setting-row vertical">
+                            <label>Modo de Câmera</label>
+                            <select id="camera-mode">
+                                <option value="isometric">Isométrica (Clássico)</option>
+                                <option value="thirdperson">Terceira Pessoa (Orbital)</option>
+                                <option value="firstperson">Primeira Pessoa (Imersão)</option>
+                                <option value="free">Construtor (Livre)</option>
+                            </select>
+                        </div>
+                        <div class="setting-row vertical">
+                            <label>Distância / Zoom</label>
+                            <input type="range" id="camera-distance" min="2" max="30" step="0.5" value="12">
+                        </div>
+                        <div class="setting-row vertical">
+                            <label>Altura (Isometric)</label>
+                            <input type="range" id="camera-height" min="2" max="30" step="0.5" value="12">
+                        </div>
+                        <div class="setting-row vertical">
+                            <label>Offset Vertical</label>
+                            <input type="range" id="camera-v-offset" min="0" max="5" step="0.1" value="1.5">
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div id="tab-camera" class="tab-content">
-                <div class="settings-section">
-                    <div class="setting-row">
-                        <label>Modo de Câmera:</label>
-                        <select id="camera-mode">
-                            <option value="isometric">Isométrica (RPG)</option>
-                            <option value="thirdperson">Terceira Pessoa</option>
-                            <option value="firstperson">Primeira Pessoa</option>
-                            <option value="free">Câmera Livre (Construtor)</option>
-                        </select>
-                    </div>
-                    <div class="setting-row">
-                        <label>Distância / Zoom</label>
-                        <input type="range" id="camera-distance" min="2" max="30" step="0.5" value="10">
-                    </div>
-                    <div class="setting-row">
-                        <label>Altura (Isometric)</label>
-                        <input type="range" id="camera-height" min="2" max="30" step="0.5" value="10">
-                    </div>
-                    <div class="setting-row">
-                        <label>Offset Vertical (3ª Pessoa)</label>
-                        <input type="range" id="camera-v-offset" min="0" max="5" step="0.1" value="2">
-                    </div>
-                    <p class="help-text">
-                        <b>Isométrica:</b> Ângulo fixo clássico.<br>
-                        <b>Terceira Pessoa:</b> Segue o olhar do personagem.<br>
-                        <b>Primeira Pessoa:</b> Visão pelos olhos (Mouse para girar).<br>
-                        <b>Livre:</b> Teclas de navegação + Mouse.
-                    </p>
-                </div>
-            </div>
-
-            <div id="tab-terreno" class="tab-content">
-                <div class="settings-section">
-                    <h4>Geometria</h4>
-                    <div class="setting-row">
-                        <label>Tamanho</label>
-                        <input type="range" id="terrain-size" min="10" max="100" step="1" value="50">
-                    </div>
-                    <div class="setting-row">
-                        <label>Qualidade (Subdivisões)</label>
-                        <input type="range" id="terrain-quality" min="10" max="100" step="1" value="40">
-                    </div>
-                    <div class="setting-row">
-                        <label><input type="checkbox" id="terrain-triangulate" checked> Triangulado (Low-Poly)</label>
+                <div id="tab-terreno" class="tab-content">
+                    <div class="settings-group">
+                        <h3>Geometria</h3>
+                        <div class="setting-row vertical">
+                            <label>Tamanho da Ilha</label>
+                            <input type="range" id="terrain-size" min="10" max="100" step="1" value="50">
+                        </div>
+                        <div class="setting-row vertical">
+                            <label>Subdivisões (Qualidade)</label>
+                            <input type="range" id="terrain-quality" min="10" max="100" step="1" value="40">
+                        </div>
+                        <div class="setting-row">
+                            <label class="switch">
+                                <input type="checkbox" id="terrain-triangulate" checked>
+                                <span class="slider round"></span>
+                            </label>
+                            <span>Estilo Low-Poly</span>
+                        </div>
                     </div>
 
-                    <h4>Níveis e Cores</h4>
-                    <div class="setting-row">
-                        <label>Nível da Água</label>
-                        <input type="range" id="water-level" min="0" max="5" step="0.1" value="1.5">
-                    </div>
-                    <div class="setting-row">
-                        <label>Altura da Grama</label>
-                        <input type="range" id="grass-level" min="0" max="5" step="0.1" value="2.0">
-                    </div>
-                    <div class="setting-row">
-                        <label>Mar</label>
-                        <input type="color" id="color-sea" value="#2a4d69">
-                    </div>
-                    <div class="setting-row">
-                        <label>Terra</label>
-                        <input type="color" id="color-dirt" value="#8b5a2b">
-                    </div>
-                    <div class="setting-row">
-                        <label>Grama</label>
-                        <input type="color" id="color-grass" value="#3a5a40">
+                    <div class="settings-group">
+                        <h3>Água & Níveis</h3>
+                        <div class="setting-row vertical">
+                            <label>Nível da Água</label>
+                            <input type="range" id="water-level" min="0" max="5" step="0.1" value="1.5">
+                        </div>
+                        <div class="setting-row vertical">
+                            <label>Nível da Grama</label>
+                            <input type="range" id="grass-level" min="0" max="5" step="0.1" value="2.0">
+                        </div>
+                        <div class="setting-row vertical">
+                            <label>Velocidade Ondas</label>
+                            <input type="range" id="water-speed" min="0" max="2" step="0.1" value="0.4">
+                        </div>
+                        <div class="setting-row vertical">
+                            <label>Intensidade Ondas</label>
+                            <input type="range" id="water-intensity" min="0" max="1" step="0.05" value="0.15">
+                        </div>
+                        <div class="setting-row vertical">
+                            <label>Opacidade Água</label>
+                            <input type="range" id="water-opacity" min="0" max="1" step="0.05" value="0.7">
+                        </div>
                     </div>
 
-                    <h4>Água</h4>
-                    <div class="setting-row">
-                        <label>Velocidade Ondas</label>
-                        <input type="range" id="water-speed" min="0" max="5" step="0.1" value="1">
-                    </div>
-                    <div class="setting-row">
-                        <label>Intensidade Ondas</label>
-                        <input type="range" id="water-intensity" min="0" max="2" step="0.1" value="0.5">
-                    </div>
-                    <div class="setting-row">
-                        <label>Transparência</label>
-                        <input type="range" id="water-opacity" min="0" max="1" step="0.05" value="0.6">
+                    <div class="settings-group">
+                        <h3>Cores Terreno</h3>
+                        <div class="color-grid">
+                            <div class="color-item">
+                                <label>Mar</label>
+                                <input type="color" id="color-sea" value="#1a3d59">
+                            </div>
+                            <div class="color-item">
+                                <label>Terra</label>
+                                <input type="color" id="color-dirt" value="#7b4a1b">
+                            </div>
+                            <div class="color-item">
+                                <label>Grama</label>
+                                <input type="color" id="color-grass" value="#2a4a30">
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div id="tab-presets" class="tab-content">
-                <div class="settings-section">
-                    <button id="btn-save-preset" class="ui-button">Salvar Local (Browser)</button>
-                    <button id="btn-load-preset" class="ui-button">Carregar Local</button>
-
-                    <h4>GitHub / Código</h4>
-                    <p class="help-text">Para salvar permanentemente no projeto, copie o código abaixo e envie para mim.</p>
-                    <button id="btn-export-json" class="ui-button" style="background: #27ae60;">Copiar Configuração (JSON)</button>
-                    <textarea id="import-json-area" placeholder="Cole aqui um JSON para importar..." style="width: 100%; height: 60px; background: #111; color: #fff; border: 1px solid #444; margin-top: 10px; font-size: 10px;"></textarea>
-                    <button id="btn-import-json" class="ui-button" style="font-size: 14px; margin-top: 5px;">Importar JSON</button>
-
-                    <button id="btn-reset-defaults" class="ui-button" style="background: #c0392b; margin-top: 20px;">Resetar Tudo</button>
+                <div id="tab-presets" class="tab-content">
+                    <div class="settings-group">
+                        <h3>Persistência</h3>
+                        <div class="btn-grid">
+                            <button id="btn-save-preset" class="btn primary">Salvar Local</button>
+                            <button id="btn-load-preset" class="btn secondary">Carregar Local</button>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <h3>Compartilhar JSON</h3>
+                        <textarea id="import-json-area" placeholder="Cole JSON aqui..."></textarea>
+                        <div class="btn-grid">
+                            <button id="btn-export-json" class="btn success">Copiar JSON</button>
+                            <button id="btn-import-json" class="btn warning">Importar</button>
+                        </div>
+                    </div>
+                    <button id="btn-reset-defaults" class="btn danger full">Resetar Jogo</button>
                 </div>
             </div>
+        </div>
+
+        <!-- Help Tooltip -->
+        <div id="help-hint">
+            [F] Colher | [Espaço] Pular/Ação | [Mouse Dir] Girar
         </div>
     </div>
 

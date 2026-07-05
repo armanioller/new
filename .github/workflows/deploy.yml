@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main, jules-3817258942576367438-a87d16db ] # Adicionado branch atual para teste de workflow
+    branches: ['**'] # Roda em qualquer branch para garantir o deploy
 
 permissions:
   contents: read

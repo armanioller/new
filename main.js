@@ -18,6 +18,23 @@ const realTimeToggle = document.getElementById('real-time-toggle');
 const manualTimeControls = document.getElementById('manual-time-controls');
 const cameraModeSelect = document.getElementById('camera-mode');
 
+// Novos controles de terreno
+const waterLevelSlider = document.getElementById('water-level');
+const grassLevelSlider = document.getElementById('grass-level');
+const colorSeaPicker = document.getElementById('color-sea');
+const colorDirtPicker = document.getElementById('color-dirt');
+const colorGrassPicker = document.getElementById('color-grass');
+
+let terrainSettings = {
+    waterLevel: 1.5,
+    grassLevel: 2.0,
+    colors: {
+        sea: new THREE.Color(0x2a4d69),
+        dirt: new THREE.Color(0x8b5a2b),
+        grass: new THREE.Color(0x3a5a40)
+    }
+};
+
 settingsToggle.addEventListener('click', () => {
     settingsMenu.style.display = settingsMenu.style.display === 'block' ? 'none' : 'block';
 });
@@ -37,6 +54,31 @@ realTimeToggle.addEventListener('change', (e) => {
 
 cameraModeSelect.addEventListener('change', (e) => {
     cameraMode = e.target.value;
+});
+
+waterLevelSlider.addEventListener('input', (e) => {
+    terrainSettings.waterLevel = parseFloat(e.target.value);
+    updateTerrainVisuals();
+});
+
+grassLevelSlider.addEventListener('input', (e) => {
+    terrainSettings.grassLevel = parseFloat(e.target.value);
+    updateTerrainVisuals();
+});
+
+colorSeaPicker.addEventListener('input', (e) => {
+    terrainSettings.colors.sea.set(e.target.value);
+    updateTerrainVisuals();
+});
+
+colorDirtPicker.addEventListener('input', (e) => {
+    terrainSettings.colors.dirt.set(e.target.value);
+    updateTerrainVisuals();
+});
+
+colorGrassPicker.addEventListener('input', (e) => {
+    terrainSettings.colors.grass.set(e.target.value);
+    updateTerrainVisuals();
 });
 
 function formatTime(t) {
@@ -70,20 +112,72 @@ sunLight.shadow.mapSize.width = 1024;
 sunLight.shadow.mapSize.height = 1024;
 scene.add(sunLight);
 
-// --- TERRENO (Low-Poly) ---
+// --- TERRENO E ÁGUA ---
 // Criando um terreno levemente acidentado
-const floorGeometry = new THREE.PlaneGeometry(30, 30, 10, 10);
+const floorGeometry = new THREE.PlaneGeometry(50, 50, 40, 40);
 const floorMaterial = new THREE.MeshStandardMaterial({
-    color: 0x3a5a40,
+    vertexColors: true,
     flatShading: true
 });
 
-// "Bagunçar" um pouco os vértices para o visual low-poly
-const vertices = floorGeometry.attributes.position.array;
-for (let i = 0; i < vertices.length; i += 3) {
-    vertices[i + 2] = Math.random() * 0.5;
+// Criar Água
+const waterGeometry = new THREE.PlaneGeometry(50, 50);
+const waterMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0077be,
+    transparent: true,
+    opacity: 0.6,
+    flatShading: true
+});
+const water = new THREE.Mesh(waterGeometry, waterMaterial);
+water.rotation.x = -Math.PI / 2;
+water.position.y = terrainSettings.waterLevel;
+scene.add(water);
+
+// "Bagunçar" os vértices e aplicar cores iniciais
+function initTerrain() {
+    const vertices = floorGeometry.attributes.position.array;
+    for (let i = 0; i < vertices.length; i += 3) {
+        // Gerar relevo (mais acidentado)
+        const x = vertices[i];
+        const y = vertices[i + 1];
+        // Simples ruído baseado em senos para um visual natural
+        vertices[i + 2] = (Math.sin(x * 0.2) + Math.cos(y * 0.2)) * 2 + Math.random() * 0.5;
+    }
+    floorGeometry.computeVertexNormals();
+
+    // Adicionar atributo de cor
+    const count = floorGeometry.attributes.position.count;
+    floorGeometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+
+    updateTerrainVisuals();
 }
-floorGeometry.computeVertexNormals();
+
+function updateTerrainVisuals() {
+    const vertices = floorGeometry.attributes.position.array;
+    const colors = floorGeometry.attributes.color.array;
+
+    for (let i = 0; i < vertices.length; i += 3) {
+        const height = vertices[i + 2];
+        let color;
+
+        if (height < terrainSettings.waterLevel) {
+            color = terrainSettings.colors.sea;
+        } else if (height < terrainSettings.grassLevel) {
+            color = terrainSettings.colors.dirt;
+        } else {
+            color = terrainSettings.colors.grass;
+        }
+
+        colors[i] = color.r;
+        colors[i+1] = color.g;
+        colors[i+2] = color.b;
+    }
+
+    floorGeometry.attributes.color.needsUpdate = true;
+    water.position.y = terrainSettings.waterLevel;
+}
+
+initTerrain();
 
 const floor = new THREE.Mesh(floorGeometry, floorMaterial);
 floor.rotation.x = -Math.PI / 2;

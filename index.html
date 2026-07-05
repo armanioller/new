@@ -20,14 +20,39 @@
         <button id="settings-toggle" class="ui-button">⚙️ Configurações</button>
 
         <div id="settings-menu">
-            <h3>Ambiente</h3>
-            <div class="setting-row">
-                <label>Hora: <span id="time-display">12:00</span></label>
-                <input type="range" id="time-slider" min="0" max="24" step="0.1" value="12">
+            <div class="settings-section">
+                <h3>Ambiente</h3>
+                <div class="setting-row">
+                    <label><input type="checkbox" id="real-time-toggle" checked> Sincronizar Tempo Real (Global)</label>
+                </div>
+                <div class="setting-row">
+                    <label>Hora: <span id="time-display">12:00</span></label>
+                    <div class="slider-container">
+                        <input type="range" id="time-slider" min="0" max="24" step="0.01" value="12">
+                        <div class="slider-labels">
+                            <span>Meia Noite</span>
+                            <span>Meio Dia</span>
+                            <span>Noite</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="manual-time-controls" style="display: none;">
+                    <div class="setting-row">
+                        <label>Velocidade do Tempo</label>
+                        <input type="range" id="time-speed" min="0" max="10" step="0.1" value="1">
+                    </div>
+                </div>
             </div>
-            <div class="setting-row">
-                <label>Velocidade do Tempo</label>
-                <input type="range" id="time-speed" min="0" max="2" step="0.1" value="0.5">
+
+            <div class="settings-section">
+                <h3>Câmera</h3>
+                <div class="setting-row">
+                    <label>Modo de Câmera:</label>
+                    <select id="camera-mode">
+                        <option value="follow">Seguir Personagem</option>
+                        <option value="free">Câmera Livre (Construtor)</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>

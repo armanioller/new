@@ -3,15 +3,20 @@ import * as THREE from 'three';
 // --- CONFIGURAÇÃO INICIAL ---
 const scene = new THREE.Scene();
 
-// --- SISTEMA DE TEMPO ---
+// --- SISTEMA DE CONTROLE E UI ---
+let useRealTime = true;
 let timeOfDay = 12; // 0 a 24
-let timeSpeed = 0.5;
+let timeSpeed = 1.0;
+let cameraMode = 'follow'; // 'follow' ou 'free'
 
 const timeDisplay = document.getElementById('time-display');
 const timeSlider = document.getElementById('time-slider');
 const timeSpeedSlider = document.getElementById('time-speed');
 const settingsToggle = document.getElementById('settings-toggle');
 const settingsMenu = document.getElementById('settings-menu');
+const realTimeToggle = document.getElementById('real-time-toggle');
+const manualTimeControls = document.getElementById('manual-time-controls');
+const cameraModeSelect = document.getElementById('camera-mode');
 
 settingsToggle.addEventListener('click', () => {
     settingsMenu.style.display = settingsMenu.style.display === 'block' ? 'none' : 'block';
@@ -23,6 +28,15 @@ timeSlider.addEventListener('input', (e) => {
 
 timeSpeedSlider.addEventListener('input', (e) => {
     timeSpeed = parseFloat(e.target.value);
+});
+
+realTimeToggle.addEventListener('change', (e) => {
+    useRealTime = e.target.checked;
+    manualTimeControls.style.display = useRealTime ? 'none' : 'block';
+});
+
+cameraModeSelect.addEventListener('change', (e) => {
+    cameraMode = e.target.value;
 });
 
 function formatTime(t) {
@@ -91,42 +105,97 @@ const keys = {
     w: false,
     a: false,
     s: false,
-    d: false
+    d: false,
+    q: false, // Para subir na camera livre
+    e: false  // Para descer na camera livre
 };
 
 window.addEventListener('keydown', (e) => {
-    if (keys.hasOwnProperty(e.key.toLowerCase())) {
-        keys[e.key.toLowerCase()] = true;
+    const key = e.key.toLowerCase();
+    if (keys.hasOwnProperty(key)) {
+        keys[key] = true;
     }
 });
 
 window.addEventListener('keyup', (e) => {
-    if (keys.hasOwnProperty(e.key.toLowerCase())) {
-        keys[e.key.toLowerCase()] = false;
+    const key = e.key.toLowerCase();
+    if (keys.hasOwnProperty(key)) {
+        keys[key] = false;
     }
 });
 
 const playerSpeed = 0.1;
+const cameraSpeed = 0.2;
 
-function updatePlayer() {
+function updateMovement() {
+    if (cameraMode === 'follow') {
+        updatePlayerFollow();
+    } else {
+        updateFreeCamera();
+    }
+}
+
+function updatePlayerFollow() {
     const moveX = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
     const moveZ = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
 
     if (moveX !== 0 || moveZ !== 0) {
-        // Normalizar vetor de movimento para velocidade diagonal não ser maior
         const length = Math.sqrt(moveX * moveX + moveZ * moveZ);
         player.position.x += (moveX / length) * playerSpeed;
         player.position.z += (moveZ / length) * playerSpeed;
 
-        // Rotacionar o player para a direção do movimento
         const targetAngle = Math.atan2(moveX, moveZ);
         player.rotation.y = targetAngle;
     }
 
-    // Fazer a câmera seguir o jogador (opcional mas bom para o RPG)
-    camera.position.x = player.position.x + 8;
-    camera.position.z = player.position.z + 8;
+    // Câmera segue o jogador
+    camera.position.lerp(new THREE.Vector3(player.position.x + 8, player.position.y + 8, player.position.z + 8), 0.1);
     camera.lookAt(player.position);
+}
+
+let cameraRotation = { x: -Math.PI / 4, y: Math.PI / 4 };
+let isRightMouseDown = false;
+
+window.addEventListener('mousedown', (e) => {
+    if (e.button === 2) isRightMouseDown = true;
+});
+
+window.addEventListener('mouseup', (e) => {
+    if (e.button === 2) isRightMouseDown = false;
+});
+
+window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+window.addEventListener('mousemove', (e) => {
+    if (isRightMouseDown && cameraMode === 'free') {
+        cameraRotation.y -= e.movementX * 0.005;
+        cameraRotation.x -= e.movementY * 0.005;
+        cameraRotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraRotation.x));
+    }
+});
+
+function updateFreeCamera() {
+    const moveX = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
+    const moveZ = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
+    const moveY = (keys.q ? 1 : 0) - (keys.e ? 1 : 0);
+
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+
+    // Remover componente Y para movimento horizontal
+    forward.y = 0;
+    forward.normalize();
+    right.y = 0;
+    right.normalize();
+
+    if (moveX !== 0 || moveZ !== 0 || moveY !== 0) {
+        camera.position.add(forward.multiplyScalar(-moveZ * cameraSpeed));
+        camera.position.add(right.multiplyScalar(moveX * cameraSpeed));
+        camera.position.y += moveY * cameraSpeed;
+    }
+
+    camera.rotation.order = 'YXZ';
+    camera.rotation.set(cameraRotation.x, cameraRotation.y, 0);
 }
 
 // Algumas árvores espalhadas
@@ -160,13 +229,23 @@ createTree(2, 6);
 // --- ATUALIZAÇÃO DO AMBIENTE ---
 function updateEnvironment() {
     // 1. Atualizar Hora
-    timeOfDay = (timeOfDay + (0.01 * timeSpeed)) % 24;
+    if (useRealTime) {
+        const now = new Date();
+        // Sincronizar com UTC para ser "global" ou local? O usuário pediu global/SecondLife.
+        // Second Life usa o horário do Pacífico (PT), mas vamos usar UTC para ser verdadeiramente global.
+        timeOfDay = now.getUTCHours() + (now.getUTCMinutes() / 60) + (now.getUTCSeconds() / 3600);
+    } else {
+        timeOfDay = (timeOfDay + (0.002 * timeSpeed)) % 24;
+    }
+
     timeDisplay.innerText = formatTime(timeOfDay);
     timeSlider.value = timeOfDay;
 
     // 2. Cores do Céu e Intensidade da Luz
     // Mapear timeOfDay para cores e posições
-    const angle = (timeOfDay / 24) * Math.PI * 2 + Math.PI; // Ajuste para o sol nascer no lugar certo
+    // Às 12h (meio-dia), o sol deve estar no topo (y > 0).
+    // Às 0h (meia-noite), o sol deve estar embaixo (y < 0).
+    const angle = ((timeOfDay - 6) / 24) * Math.PI * 2;
 
     // Posição do sol/lua
     sunLight.position.set(
@@ -175,26 +254,43 @@ function updateEnvironment() {
         10
     );
 
-    // Lógica de cores baseada na fase
+    // Lógica de cores baseada na fase (Transição Suave)
     let skyColor, sunIntensity, ambientIntensity;
+    const dawnStart = 5, dawnEnd = 8;
+    const dayStart = 8, dayEnd = 17;
+    const sunsetStart = 17, sunsetEnd = 20;
 
-    if (timeOfDay >= 5 && timeOfDay < 8) { // Amanhecer
-        const t = (timeOfDay - 5) / 3;
-        skyColor = new THREE.Color(0xffa07a).lerp(new THREE.Color(0x87ceeb), t);
+    const colors = {
+        midnight: new THREE.Color(0x000011),
+        dawn: new THREE.Color(0xffa07a),
+        noon: new THREE.Color(0x87ceeb),
+        sunset: new THREE.Color(0xff4500)
+    };
+
+    if (timeOfDay >= dawnStart && timeOfDay < dawnEnd) { // Madrugada -> Amanhecer -> Dia
+        const t = (timeOfDay - dawnStart) / (dawnEnd - dawnStart);
+        skyColor = colors.dawn.clone().lerp(colors.noon, t);
         sunIntensity = t;
-        ambientIntensity = 0.3 + (t * 0.2);
-    } else if (timeOfDay >= 8 && timeOfDay < 17) { // Dia
-        skyColor = new THREE.Color(0x87ceeb);
+        ambientIntensity = 0.2 + (t * 0.3);
+    } else if (timeOfDay >= dayStart && timeOfDay < dayEnd) { // Dia
+        skyColor = colors.noon;
         sunIntensity = 1;
         ambientIntensity = 0.5;
-    } else if (timeOfDay >= 17 && timeOfDay < 20) { // Entardecer
-        const t = (timeOfDay - 17) / 3;
-        skyColor = new THREE.Color(0x87ceeb).lerp(new THREE.Color(0xff4500), t);
-        sunIntensity = 1 - (t * 0.8);
-        ambientIntensity = 0.5 - (t * 0.2);
+    } else if (timeOfDay >= sunsetStart && timeOfDay < sunsetEnd) { // Dia -> Entardecer -> Noite
+        const t = (timeOfDay - sunsetStart) / (sunsetEnd - sunsetStart);
+        skyColor = colors.noon.clone().lerp(colors.sunset, t).lerp(colors.midnight, t * 0.5);
+        sunIntensity = 1 - t;
+        ambientIntensity = 0.5 - (t * 0.3);
     } else { // Noite
-        skyColor = new THREE.Color(0x000011);
-        sunIntensity = 0.1; // Luz da lua
+        // Transição da Noite (entre sunsetEnd e dawnStart)
+        let t;
+        if (timeOfDay >= sunsetEnd) {
+            t = (timeOfDay - sunsetEnd) / (24 - sunsetEnd + dawnStart);
+        } else {
+            t = (timeOfDay + (24 - sunsetEnd)) / (24 - sunsetEnd + dawnStart);
+        }
+        skyColor = colors.sunset.clone().lerp(colors.midnight, Math.min(t * 2, 1));
+        sunIntensity = 0.05;
         ambientIntensity = 0.2;
     }
 
@@ -221,7 +317,7 @@ function animate() {
     requestAnimationFrame(animate);
 
     updateEnvironment();
-    updatePlayer();
+    updateMovement();
 
     renderer.render(scene, camera);
 }

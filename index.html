@@ -20,62 +20,126 @@
         <button id="settings-toggle" class="ui-button">⚙️ Configurações</button>
 
         <div id="settings-menu">
-            <div class="settings-section">
-                <h3>Ambiente</h3>
-                <div class="setting-row">
-                    <label><input type="checkbox" id="real-time-toggle" checked> Sincronizar Tempo Real (Global)</label>
-                </div>
-                <div class="setting-row">
-                    <label>Hora: <span id="time-display">12:00</span></label>
-                    <div class="slider-container">
-                        <input type="range" id="time-slider" min="0" max="24" step="0.01" value="12">
-                        <div class="slider-labels">
-                            <span>Meia Noite</span>
-                            <span>Meio Dia</span>
-                            <span>Noite</span>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="tab-ambiente">Ambiente</button>
+                <button class="tab-btn" data-tab="tab-camera">Câmera</button>
+                <button class="tab-btn" data-tab="tab-terreno">Terreno</button>
+                <button class="tab-btn" data-tab="tab-presets">Presets</button>
+            </div>
+
+            <div id="tab-ambiente" class="tab-content active">
+                <div class="settings-section">
+                    <div class="setting-row">
+                        <label><input type="checkbox" id="real-time-toggle" checked> Sincronizar Tempo Real (Global)</label>
+                    </div>
+                    <div class="setting-row">
+                        <label>Hora: <span id="time-display">12:00</span></label>
+                        <div class="slider-container">
+                            <input type="range" id="time-slider" min="0" max="24" step="0.01" value="12">
+                            <div class="slider-labels">
+                                <span>00h</span>
+                                <span>12h</span>
+                                <span>24h</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div id="manual-time-controls" style="display: none;">
+                    <div id="manual-time-controls" style="display: none;">
+                        <div class="setting-row">
+                            <label>Velocidade do Tempo</label>
+                            <input type="range" id="time-speed" min="0" max="10" step="0.1" value="1">
+                        </div>
+                    </div>
+                    <h4>Cores do Céu</h4>
                     <div class="setting-row">
-                        <label>Velocidade do Tempo</label>
-                        <input type="range" id="time-speed" min="0" max="10" step="0.1" value="1">
+                        <label>Meia Noite</label>
+                        <input type="color" id="color-midnight" value="#020205">
+                    </div>
+                    <div class="setting-row">
+                        <label>Alvorada</label>
+                        <input type="color" id="color-dawn" value="#ffa07a">
+                    </div>
+                    <div class="setting-row">
+                        <label>Meio Dia</label>
+                        <input type="color" id="color-noon" value="#87ceeb">
+                    </div>
+                    <div class="setting-row">
+                        <label>Entardecer</label>
+                        <input type="color" id="color-sunset" value="#ff4500">
                     </div>
                 </div>
             </div>
 
-            <div class="settings-section">
-                <h3>Câmera</h3>
-                <div class="setting-row">
-                    <label>Modo de Câmera:</label>
-                    <select id="camera-mode">
-                        <option value="follow">Seguir Personagem</option>
-                        <option value="free">Câmera Livre (Construtor)</option>
-                    </select>
+            <div id="tab-camera" class="tab-content">
+                <div class="settings-section">
+                    <div class="setting-row">
+                        <label>Modo de Câmera:</label>
+                        <select id="camera-mode">
+                            <option value="follow">Seguir Personagem</option>
+                            <option value="free">Câmera Livre (Construtor)</option>
+                        </select>
+                    </div>
+                    <p class="help-text">Modo Livre: WASD (Mover), Setas (Girar), Q/E (Subir/Descer), Botão Direito Mouse (Girar).</p>
                 </div>
             </div>
 
-            <div class="settings-section">
-                <h3>Terreno</h3>
-                <div class="setting-row">
-                    <label>Nível da Água</label>
-                    <input type="range" id="water-level" min="0" max="5" step="0.1" value="1.5">
+            <div id="tab-terreno" class="tab-content">
+                <div class="settings-section">
+                    <h4>Geometria</h4>
+                    <div class="setting-row">
+                        <label>Tamanho</label>
+                        <input type="range" id="terrain-size" min="10" max="100" step="1" value="50">
+                    </div>
+                    <div class="setting-row">
+                        <label>Qualidade (Subdivisões)</label>
+                        <input type="range" id="terrain-quality" min="10" max="100" step="1" value="40">
+                    </div>
+                    <div class="setting-row">
+                        <label><input type="checkbox" id="terrain-triangulate" checked> Triangulado (Low-Poly)</label>
+                    </div>
+
+                    <h4>Níveis e Cores</h4>
+                    <div class="setting-row">
+                        <label>Nível da Água</label>
+                        <input type="range" id="water-level" min="0" max="5" step="0.1" value="1.5">
+                    </div>
+                    <div class="setting-row">
+                        <label>Altura da Grama</label>
+                        <input type="range" id="grass-level" min="0" max="5" step="0.1" value="2.0">
+                    </div>
+                    <div class="setting-row">
+                        <label>Mar</label>
+                        <input type="color" id="color-sea" value="#2a4d69">
+                    </div>
+                    <div class="setting-row">
+                        <label>Terra</label>
+                        <input type="color" id="color-dirt" value="#8b5a2b">
+                    </div>
+                    <div class="setting-row">
+                        <label>Grama</label>
+                        <input type="color" id="color-grass" value="#3a5a40">
+                    </div>
+
+                    <h4>Água</h4>
+                    <div class="setting-row">
+                        <label>Velocidade Ondas</label>
+                        <input type="range" id="water-speed" min="0" max="5" step="0.1" value="1">
+                    </div>
+                    <div class="setting-row">
+                        <label>Intensidade Ondas</label>
+                        <input type="range" id="water-intensity" min="0" max="2" step="0.1" value="0.5">
+                    </div>
+                    <div class="setting-row">
+                        <label>Transparência</label>
+                        <input type="range" id="water-opacity" min="0" max="1" step="0.05" value="0.6">
+                    </div>
                 </div>
-                <div class="setting-row">
-                    <label>Altura da Grama</label>
-                    <input type="range" id="grass-level" min="0" max="5" step="0.1" value="2.0">
-                </div>
-                <div class="setting-row">
-                    <label>Cor Fundo Mar</label>
-                    <input type="color" id="color-sea" value="#2a4d69">
-                </div>
-                <div class="setting-row">
-                    <label>Cor Terra</label>
-                    <input type="color" id="color-dirt" value="#8b5a2b">
-                </div>
-                <div class="setting-row">
-                    <label>Cor Grama</label>
-                    <input type="color" id="color-grass" value="#3a5a40">
+            </div>
+
+            <div id="tab-presets" class="tab-content">
+                <div class="settings-section">
+                    <button id="btn-save-preset" class="ui-button">Salvar Configurações Atuais</button>
+                    <button id="btn-load-preset" class="ui-button">Carregar Último Salvo</button>
+                    <button id="btn-reset-defaults" class="ui-button" style="background: #c0392b;">Resetar Padrões</button>
                 </div>
             </div>
         </div>

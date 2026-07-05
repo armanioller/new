@@ -18,6 +18,7 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: white;
     pointer-events: none;
+    z-index: 100;
 }
 
 .ui-button {
@@ -29,32 +30,76 @@ body {
     border-radius: 5px;
     pointer-events: auto;
     font-size: 20px;
+    transition: background 0.3s;
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+.ui-button:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 #settings-menu {
     position: absolute;
     top: 70px;
     right: 0;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(20, 20, 20, 0.95);
     border: 1px solid #555;
-    padding: 20px;
+    padding: 0;
     border-radius: 10px;
     display: none;
     pointer-events: auto;
-    width: 300px;
-    max-height: 80vh;
+    width: 320px;
+    max-height: 85vh;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    background: #333;
+    border-radius: 10px 10px 0 0;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 12px;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s;
+}
+
+.tab-btn.active {
+    color: #fff;
+    border-bottom: 2px solid #ffd700;
+    background: rgba(255,255,255,0.05);
+}
+
+.tab-content {
+    display: none;
+    padding: 20px;
     overflow-y: auto;
+    max-height: 70vh;
 }
 
-.settings-section {
-    border-bottom: 1px solid #444;
-    padding-bottom: 10px;
-    margin-bottom: 15px;
+.tab-content.active {
+    display: block;
 }
 
-.settings-section h3 {
-    margin-top: 0;
+.settings-section h4 {
+    margin: 20px 0 10px 0;
     color: #ffd700;
+    border-bottom: 1px solid #444;
+    padding-bottom: 5px;
+}
+
+.settings-section h4:first-child {
+    margin-top: 0;
 }
 
 .setting-row {
@@ -64,7 +109,19 @@ body {
 .setting-row label {
     display: block;
     margin-bottom: 5px;
-    font-size: 14px;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.help-text {
+    font-size: 11px;
+    color: #aaa;
+    line-height: 1.4;
+    background: rgba(255,255,255,0.05);
+    padding: 10px;
+    border-radius: 5px;
 }
 
 input[type="range"], select, input[type="color"] {
@@ -73,26 +130,42 @@ input[type="range"], select, input[type="color"] {
 }
 
 input[type="color"] {
-    height: 30px;
-    border: none;
+    height: 25px;
+    border: 1px solid #444;
     border-radius: 4px;
-    background: none;
+    background: #111;
+    padding: 2px;
 }
 
 .slider-container {
     position: relative;
-    padding-bottom: 20px;
+    padding-bottom: 15px;
 }
 
 .slider-labels {
     display: flex;
     justify-content: space-between;
     font-size: 10px;
-    color: #aaa;
+    color: #777;
     margin-top: 5px;
 }
 
 #time-display {
     font-weight: bold;
     color: #ffd700;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #111;
+}
+::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }

@@ -80,11 +80,30 @@
                     <div class="setting-row">
                         <label>Modo de Câmera:</label>
                         <select id="camera-mode">
-                            <option value="follow">Seguir Personagem</option>
+                            <option value="isometric">Isométrica (RPG)</option>
+                            <option value="thirdperson">Terceira Pessoa</option>
+                            <option value="firstperson">Primeira Pessoa</option>
                             <option value="free">Câmera Livre (Construtor)</option>
                         </select>
                     </div>
-                    <p class="help-text">Modo Livre: WASD (Mover), Setas (Girar), Q/E (Subir/Descer), Botão Direito Mouse (Girar).</p>
+                    <div class="setting-row">
+                        <label>Distância / Zoom</label>
+                        <input type="range" id="camera-distance" min="2" max="30" step="0.5" value="10">
+                    </div>
+                    <div class="setting-row">
+                        <label>Altura (Isometric)</label>
+                        <input type="range" id="camera-height" min="2" max="30" step="0.5" value="10">
+                    </div>
+                    <div class="setting-row">
+                        <label>Offset Vertical (3ª Pessoa)</label>
+                        <input type="range" id="camera-v-offset" min="0" max="5" step="0.1" value="2">
+                    </div>
+                    <p class="help-text">
+                        <b>Isométrica:</b> Ângulo fixo clássico.<br>
+                        <b>Terceira Pessoa:</b> Segue o olhar do personagem.<br>
+                        <b>Primeira Pessoa:</b> Visão pelos olhos (Mouse para girar).<br>
+                        <b>Livre:</b> Teclas de navegação + Mouse.
+                    </p>
                 </div>
             </div>
 
@@ -143,9 +162,16 @@
 
             <div id="tab-presets" class="tab-content">
                 <div class="settings-section">
-                    <button id="btn-save-preset" class="ui-button">Salvar Configurações Atuais</button>
-                    <button id="btn-load-preset" class="ui-button">Carregar Último Salvo</button>
-                    <button id="btn-reset-defaults" class="ui-button" style="background: #c0392b;">Resetar Padrões</button>
+                    <button id="btn-save-preset" class="ui-button">Salvar Local (Browser)</button>
+                    <button id="btn-load-preset" class="ui-button">Carregar Local</button>
+
+                    <h4>GitHub / Código</h4>
+                    <p class="help-text">Para salvar permanentemente no projeto, copie o código abaixo e envie para mim.</p>
+                    <button id="btn-export-json" class="ui-button" style="background: #27ae60;">Copiar Configuração (JSON)</button>
+                    <textarea id="import-json-area" placeholder="Cole aqui um JSON para importar..." style="width: 100%; height: 60px; background: #111; color: #fff; border: 1px solid #444; margin-top: 10px; font-size: 10px;"></textarea>
+                    <button id="btn-import-json" class="ui-button" style="font-size: 14px; margin-top: 5px;">Importar JSON</button>
+
+                    <button id="btn-reset-defaults" class="ui-button" style="background: #c0392b; margin-top: 20px;">Resetar Tudo</button>
                 </div>
             </div>
         </div>

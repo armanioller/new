@@ -18,7 +18,11 @@ let settings = {
         }
     },
     camera: {
-        mode: 'follow'
+        mode: 'isometric', // isometric, thirdperson, firstperson, free
+        fov: 75,
+        distance: 10,
+        height: 10,
+        verticalOffset: 2 // for third person
     },
     terrain: {
         size: 50,
@@ -59,6 +63,9 @@ const elements = {
 
     // Câmera
     cameraModeSelect: document.getElementById('camera-mode'),
+    cameraDistance: document.getElementById('camera-distance'),
+    cameraHeight: document.getElementById('camera-height'),
+    cameraVOffset: document.getElementById('camera-v-offset'),
 
     // Terreno
     terrainSize: document.getElementById('terrain-size'),
@@ -82,7 +89,10 @@ const elements = {
     // Presets
     btnSavePreset: document.getElementById('btn-save-preset'),
     btnLoadPreset: document.getElementById('btn-load-preset'),
-    btnResetDefaults: document.getElementById('btn-reset-defaults')
+    btnResetDefaults: document.getElementById('btn-reset-defaults'),
+    btnExportJSON: document.getElementById('btn-export-json'),
+    btnImportJSON: document.getElementById('btn-import-json'),
+    importJSONArea: document.getElementById('import-json-area')
 };
 
 // --- LÓGICA DE UI (TABS E TOGGLES) ---
@@ -124,7 +134,17 @@ elements.colorSunset.addEventListener('input', (e) => updateColorSetting('time',
 
 elements.cameraModeSelect.addEventListener('change', (e) => {
     settings.camera.mode = e.target.value;
+    if (e.target.value === 'firstperson') {
+        camera.fov = 90;
+    } else {
+        camera.fov = settings.camera.fov;
+    }
+    camera.updateProjectionMatrix();
 });
+
+elements.cameraDistance.addEventListener('input', (e) => settings.camera.distance = parseFloat(e.target.value));
+elements.cameraHeight.addEventListener('input', (e) => settings.camera.height = parseFloat(e.target.value));
+elements.cameraVOffset.addEventListener('input', (e) => settings.camera.verticalOffset = parseFloat(e.target.value));
 
 // Terreno Listeners
 elements.terrainSize.addEventListener('change', (e) => {
@@ -394,7 +414,7 @@ function createRockMesh() {
 }
 
 function tryHarvest() {
-    if (settings.camera.mode !== 'follow') return;
+    if (settings.camera.mode === 'free') return;
 
     // Achar recurso mais próximo
     let closest = null;
@@ -413,7 +433,6 @@ function tryHarvest() {
         playerGroup.lookAt(closest.position.x, playerGroup.position.y, closest.position.z);
 
         // Tentar animação de ação
-        // Verificando nomes comuns em RobotExpressive: Punch, Jump, Dance
         const actionName = animations['punch'] ? 'punch' : (animations['jump'] ? 'jump' : 'idle');
         fadeToAction(actionName, 0.1);
 
@@ -433,7 +452,6 @@ function tryHarvest() {
                 updateHUD();
             }
 
-            // Volta para idle após um tempo
             setTimeout(() => fadeToAction('idle'), 500);
         }, 300);
     }
@@ -468,7 +486,6 @@ playerPlaceholder.traverse(child => { if(child.isMesh) child.castShadow = true; 
 playerGroup.add(playerPlaceholder);
 
 const loader = new GLTFLoader();
-// URL de exemplo (RobotExpressive é ótimo para testes low-poly/stylized)
 const MODEL_URL = 'https://threejs.org/examples/models/gltf/RobotExpressive.glb';
 
 loader.load(MODEL_URL, (gltf) => {
@@ -486,7 +503,6 @@ loader.load(MODEL_URL, (gltf) => {
     fadeToAction('idle');
 }, undefined, (error) => {
     console.error('Erro ao carregar modelo:', error);
-    // Mantém o placeholder se falhar
 });
 
 function fadeToAction(name, duration = 0.2) {
@@ -504,10 +520,7 @@ const keys = {};
 window.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
     keys[key] = true;
-
-    if (key === ' ' || key === 'f') {
-        tryHarvest();
-    }
+    if (key === ' ' || key === 'f') tryHarvest();
 });
 window.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
 
@@ -520,7 +533,7 @@ window.addEventListener('mousedown', (e) => { if (e.button === 2) isRightMouseDo
 window.addEventListener('mouseup', (e) => { if (e.button === 2) isRightMouseDown = false; });
 window.addEventListener('contextmenu', (e) => e.preventDefault());
 window.addEventListener('mousemove', (e) => {
-    if (isRightMouseDown && settings.camera.mode === 'free') {
+    if (isRightMouseDown || settings.camera.mode === 'firstperson') {
         cameraRotation.y -= e.movementX * 0.005;
         cameraRotation.x -= e.movementY * 0.005;
         cameraRotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraRotation.x));
@@ -532,15 +545,19 @@ const ACCELERATION = 0.02;
 const FRICTION = 0.9;
 
 function updateMovement(delta) {
-    if (settings.camera.mode === 'follow') {
-        const moveX = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
-        const moveZ = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
+    const moveX = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
+    const moveZ = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
+    const isMoving = moveX !== 0 || moveZ !== 0;
 
-        const isMoving = moveX !== 0 || moveZ !== 0;
-
+    if (settings.camera.mode !== 'free') {
         if (isMoving) {
-            const targetAngle = Math.atan2(moveX, moveZ);
-            // Rotação suave
+            let targetAngle;
+            if (settings.camera.mode === 'firstperson') {
+                targetAngle = Math.atan2(moveX, moveZ) + cameraRotation.y;
+            } else {
+                targetAngle = Math.atan2(moveX, moveZ);
+            }
+
             const currentRotation = playerGroup.rotation.y;
             let diff = targetAngle - currentRotation;
             while (diff < -Math.PI) diff += Math.PI * 2;
@@ -549,50 +566,56 @@ function updateMovement(delta) {
 
             playerVelocity.x += Math.sin(targetAngle) * ACCELERATION;
             playerVelocity.z += Math.cos(targetAngle) * ACCELERATION;
-
-            fadeToAction('walking' || 'walk' || 'run');
+            fadeToAction('walking' || 'walk');
         } else {
             fadeToAction('idle');
         }
 
         playerVelocity.multiplyScalar(FRICTION);
-
-        // Bloquear movimento se estiver colhendo (animação de ação)
         const isAction = currentAction && (currentAction.getClip().name.toLowerCase().includes('punch') || currentAction.getClip().name.toLowerCase().includes('jump'));
-        if (!isAction) {
-            playerGroup.position.add(playerVelocity);
-        }
+        if (!isAction) playerGroup.position.add(playerVelocity);
 
-        // Altura do terreno dinâmica
         const h = getTerrainHeight(playerGroup.position.x, playerGroup.position.z);
-    // Altura mínima é o nível da água
-    const targetY = Math.max(settings.terrain.waterLevel, h);
-    playerGroup.position.y = THREE.MathUtils.lerp(playerGroup.position.y, targetY, 0.2);
+        playerGroup.position.y = THREE.MathUtils.lerp(playerGroup.position.y, Math.max(settings.terrain.waterLevel, h), 0.2);
+    }
 
-    // Câmera mais baixa e próxima para melhor visual RPG
-    camera.position.lerp(new THREE.Vector3(playerGroup.position.x + 10, playerGroup.position.y + 10, playerGroup.position.z + 10), 0.05);
-        camera.lookAt(playerGroup.position);
-    } else {
-        const moveX = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
-        const moveZ = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
-        const moveY = (keys.q || keys.pageup ? 1 : 0) - (keys.e || keys.pagedown ? 1 : 0);
+    const pPos = playerGroup.position;
+    const camSet = settings.camera;
 
-        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-        forward.y = 0; right.y = 0;
-        forward.normalize(); right.normalize();
-
-        camera.position.add(forward.multiplyScalar(-moveZ * cameraSpeed));
-        camera.position.add(right.multiplyScalar(moveX * cameraSpeed));
-        camera.position.y += moveY * cameraSpeed;
-
-        if (keys.arrowleft) cameraRotation.y += 0.03;
-        if (keys.arrowright) cameraRotation.y -= 0.03;
-        if (keys.arrowup) cameraRotation.x += 0.03;
-        if (keys.arrowdown) cameraRotation.x -= 0.03;
-
-        camera.rotation.order = 'YXZ';
-        camera.rotation.set(cameraRotation.x, cameraRotation.y, 0);
+    switch (camSet.mode) {
+        case 'isometric':
+            camera.position.lerp(new THREE.Vector3(pPos.x + camSet.distance, pPos.y + camSet.height, pPos.z + camSet.distance), 0.05);
+            camera.lookAt(pPos);
+            break;
+        case 'thirdperson':
+            const back = new THREE.Vector3(0, camSet.verticalOffset, camSet.distance).applyQuaternion(playerGroup.quaternion);
+            camera.position.lerp(pPos.clone().add(back), 0.1);
+            camera.lookAt(pPos.x, pPos.y + camSet.verticalOffset, pPos.z);
+            break;
+        case 'firstperson':
+            camera.position.copy(pPos);
+            camera.position.y += 1.6;
+            camera.rotation.order = 'YXZ';
+            camera.rotation.set(cameraRotation.x, cameraRotation.y, 0);
+            if (isMoving) playerGroup.rotation.y = cameraRotation.y;
+            break;
+        case 'free':
+            const f_moveX = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
+            const f_moveZ = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
+            const f_moveY = (keys.q || keys.pageup ? 1 : 0) - (keys.e || keys.pagedown ? 1 : 0);
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+            forward.y = 0; right.y = 0; forward.normalize(); right.normalize();
+            camera.position.add(forward.multiplyScalar(-f_moveZ * cameraSpeed));
+            camera.position.add(right.multiplyScalar(f_moveX * cameraSpeed));
+            camera.position.y += f_moveY * cameraSpeed;
+            if (keys.arrowleft) cameraRotation.y += 0.03;
+            if (keys.arrowright) cameraRotation.y -= 0.03;
+            if (keys.arrowup) cameraRotation.x += 0.03;
+            if (keys.arrowdown) cameraRotation.x -= 0.03;
+            camera.rotation.order = 'YXZ';
+            camera.rotation.set(cameraRotation.x, cameraRotation.y, 0);
+            break;
     }
 }
 
@@ -611,38 +634,30 @@ function updateEnvironment(time) {
     const angle = ((settings.time.timeOfDay - 6) / 24) * Math.PI * 2;
     sunLight.position.set(Math.cos(angle) * 40, Math.sin(angle) * 40, 20);
 
-    // Interpolação de cores
     let skyColor, sunInt, ambInt;
     const t = settings.time.timeOfDay;
     const c = settings.time.colors;
 
-    if (t >= 5 && t < 8) { // Dawn
-        const f = (t - 5) / 3;
-        skyColor = c.midnight.clone().lerp(c.dawn, f);
+    if (t >= 5 && t < 8) {
+        const f = (t - 5) / 3; skyColor = c.midnight.clone().lerp(c.dawn, f);
         sunInt = f; ambInt = 0.2 + f * 0.3;
-    } else if (t >= 8 && t < 17) { // Noon
-        const f = (t - 8) / 9;
-        skyColor = c.dawn.clone().lerp(c.noon, f);
+    } else if (t >= 8 && t < 17) {
+        const f = (t - 8) / 9; skyColor = c.dawn.clone().lerp(c.noon, f);
         sunInt = 1; ambInt = 0.5;
-    } else if (t >= 17 && t < 20) { // Sunset
-        const f = (t - 17) / 3;
-        skyColor = c.noon.clone().lerp(c.sunset, f);
+    } else if (t >= 17 && t < 20) {
+        const f = (t - 17) / 3; skyColor = c.noon.clone().lerp(c.sunset, f);
         sunInt = 1 - f; ambInt = 0.5 - f * 0.3;
-    } else { // Night
-        skyColor = c.midnight;
-        sunInt = 0; ambInt = 0.2;
+    } else {
+        skyColor = c.midnight; sunInt = 0; ambInt = 0.2;
     }
 
     scene.background = skyColor;
     if (scene.fog) scene.fog.color.copy(skyColor);
-
     const skydome = scene.getObjectByName("skydome");
     if (skydome) skydome.material.color.copy(skyColor);
-
     sunLight.intensity = sunInt;
     ambientLight.intensity = ambInt;
 
-    // Animar Água (Ondas simples)
     if (water) {
         const waterVertices = waterGeometry.attributes.position.array;
         const timeScale = time * 0.001 * settings.water.speed;
@@ -657,8 +672,13 @@ function updateEnvironment(time) {
 
 // --- PRESETS ---
 function savePreset() {
+    const preset = getPresetObject();
+    localStorage.setItem('rpg_preset_v1', JSON.stringify(preset));
+    alert('Configurações salvas!');
+}
+
+function getPresetObject() {
     const preset = JSON.parse(JSON.stringify(settings));
-    // Converter cores para Hex para salvar
     preset.time.colors = {
         midnight: settings.time.colors.midnight.getHexString(),
         dawn: settings.time.colors.dawn.getHexString(),
@@ -670,16 +690,16 @@ function savePreset() {
         dirt: settings.terrain.colors.dirt.getHexString(),
         grass: settings.terrain.colors.grass.getHexString()
     };
-    localStorage.setItem('rpg_preset_v1', JSON.stringify(preset));
-    alert('Configurações salvas!');
+    return preset;
 }
 
 function loadPreset() {
     const data = localStorage.getItem('rpg_preset_v1');
     if (!data) return alert('Nenhum preset encontrado.');
-    const preset = JSON.parse(data);
+    applyPreset(JSON.parse(data));
+}
 
-    // Restaurar Settings
+function applyPreset(preset) {
     settings.time.useRealTime = preset.time.useRealTime;
     settings.time.timeOfDay = preset.time.timeOfDay;
     settings.time.timeSpeed = preset.time.timeSpeed;
@@ -700,9 +720,14 @@ function loadPreset() {
     settings.water.intensity = preset.water.intensity;
     settings.water.opacity = preset.water.opacity;
 
-    // Atualizar UI
-    syncUI();
-    regenerateTerrain();
+    if (preset.camera) {
+        settings.camera.mode = preset.camera.mode;
+        settings.camera.fov = preset.camera.fov || 75;
+        settings.camera.distance = preset.camera.distance || 10;
+        settings.camera.height = preset.camera.height || 10;
+        settings.camera.verticalOffset = preset.camera.verticalOffset || 2;
+    }
+    syncUI(); regenerateTerrain();
 }
 
 function syncUI() {
@@ -713,7 +738,6 @@ function syncUI() {
     elements.colorDawn.value = '#' + settings.time.colors.dawn.getHexString();
     elements.colorNoon.value = '#' + settings.time.colors.noon.getHexString();
     elements.colorSunset.value = '#' + settings.time.colors.sunset.getHexString();
-
     elements.terrainSize.value = settings.terrain.size;
     elements.terrainQuality.value = settings.terrain.quality;
     elements.waterLevel.value = settings.terrain.waterLevel;
@@ -721,41 +745,43 @@ function syncUI() {
     elements.colorSea.value = '#' + settings.terrain.colors.sea.getHexString();
     elements.colorDirt.value = '#' + settings.terrain.colors.dirt.getHexString();
     elements.colorGrass.value = '#' + settings.terrain.colors.grass.getHexString();
-
     elements.waterSpeed.value = settings.water.speed;
     elements.waterIntensity.value = settings.water.intensity;
     elements.waterOpacity.value = settings.water.opacity;
-
+    elements.cameraModeSelect.value = settings.camera.mode;
+    elements.cameraDistance.value = settings.camera.distance;
+    elements.cameraHeight.value = settings.camera.height;
+    elements.cameraVOffset.value = settings.camera.verticalOffset;
     elements.manualTimeControls.style.display = settings.time.useRealTime ? 'none' : 'block';
 }
 
 elements.btnSavePreset.addEventListener('click', savePreset);
 elements.btnLoadPreset.addEventListener('click', loadPreset);
+elements.btnExportJSON.addEventListener('click', () => {
+    const json = JSON.stringify(getPresetObject(), null, 4);
+    navigator.clipboard.writeText(json);
+    alert('Configuração copiada! Envie para o Jules.');
+});
+elements.btnImportJSON.addEventListener('click', () => {
+    try { applyPreset(JSON.parse(elements.importJSONArea.value)); alert('Importado!'); }
+    catch (e) { alert('Erro: ' + e.message); }
+});
 elements.btnResetDefaults.addEventListener('click', () => {
-    if(confirm('Resetar todas as configurações?')) {
-        localStorage.removeItem('rpg_preset_v1');
-        window.location.reload();
-    }
+    if(confirm('Resetar?')) { localStorage.removeItem('rpg_preset_v1'); window.location.reload(); }
 });
 
 const clock = new THREE.Clock();
-
-// Loop principal
 function animate(time) {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
-
     if (mixer) mixer.update(delta);
-
     updateEnvironment(time);
     updateMovement(delta);
     renderer.render(scene, camera);
 }
-
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
-
 animate(0);

@@ -102,18 +102,20 @@ scene.add(player);
 
 // --- CONTROLES ---
 const keys = {
-    w: false,
-    a: false,
-    s: false,
-    d: false,
-    q: false, // Para subir na camera livre
-    e: false  // Para descer na camera livre
+    w: false, a: false, s: false, d: false,
+    q: false, e: false,
+    arrowup: false, arrowdown: false, arrowleft: false, arrowright: false,
+    pageup: false, pagedown: false
 };
 
 window.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
     if (keys.hasOwnProperty(key)) {
         keys[key] = true;
+        // Impedir scroll padrão em teclas de navegação
+        if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'pageup', 'pagedown'].includes(key)) {
+            e.preventDefault();
+        }
     }
 });
 
@@ -175,14 +177,15 @@ window.addEventListener('mousemove', (e) => {
 });
 
 function updateFreeCamera() {
+    // 1. Movimentação (WASD + PageUp/PageDown/QE)
     const moveX = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
     const moveZ = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
-    const moveY = (keys.q ? 1 : 0) - (keys.e ? 1 : 0);
+    const moveY = (keys.pageup || keys.q ? 1 : 0) - (keys.pagedown || keys.e ? 1 : 0);
 
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
 
-    // Remover componente Y para movimento horizontal
+    // Movimento horizontal travado no plano XZ
     forward.y = 0;
     forward.normalize();
     right.y = 0;
@@ -193,6 +196,16 @@ function updateFreeCamera() {
         camera.position.add(right.multiplyScalar(moveX * cameraSpeed));
         camera.position.y += moveY * cameraSpeed;
     }
+
+    // 2. Rotação (Arrow Keys)
+    const rotationSpeed = 0.03;
+    if (keys.arrowleft) cameraRotation.y += rotationSpeed;
+    if (keys.arrowright) cameraRotation.y -= rotationSpeed;
+    if (keys.arrowup) cameraRotation.x += rotationSpeed;
+    if (keys.arrowdown) cameraRotation.x -= rotationSpeed;
+
+    // Limitar rotação vertical para não "virar cambalhota"
+    cameraRotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraRotation.x));
 
     camera.rotation.order = 'YXZ';
     camera.rotation.set(cameraRotation.x, cameraRotation.y, 0);
@@ -261,37 +274,38 @@ function updateEnvironment() {
     const sunsetStart = 17, sunsetEnd = 20;
 
     const colors = {
-        midnight: new THREE.Color(0x000011),
+        midnight: new THREE.Color(0x020205),
         dawn: new THREE.Color(0xffa07a),
         noon: new THREE.Color(0x87ceeb),
         sunset: new THREE.Color(0xff4500)
     };
 
-    if (timeOfDay >= dawnStart && timeOfDay < dawnEnd) { // Madrugada -> Amanhecer -> Dia
+    if (timeOfDay >= dawnStart && timeOfDay < dawnEnd) { // Madrugada -> Amanhecer (05h - 08h)
         const t = (timeOfDay - dawnStart) / (dawnEnd - dawnStart);
-        skyColor = colors.dawn.clone().lerp(colors.noon, t);
+        if (t < 0.5) {
+            skyColor = colors.midnight.clone().lerp(colors.dawn, t * 2);
+        } else {
+            skyColor = colors.dawn.clone().lerp(colors.noon, (t - 0.5) * 2);
+        }
         sunIntensity = t;
-        ambientIntensity = 0.2 + (t * 0.3);
-    } else if (timeOfDay >= dayStart && timeOfDay < dayEnd) { // Dia
+        ambientIntensity = 0.1 + (t * 0.4);
+    } else if (timeOfDay >= dayStart && timeOfDay < dayEnd) { // Dia (08h - 17h)
         skyColor = colors.noon;
         sunIntensity = 1;
         ambientIntensity = 0.5;
-    } else if (timeOfDay >= sunsetStart && timeOfDay < sunsetEnd) { // Dia -> Entardecer -> Noite
+    } else if (timeOfDay >= sunsetStart && timeOfDay < sunsetEnd) { // Entardecer -> Noite (17h - 20h)
         const t = (timeOfDay - sunsetStart) / (sunsetEnd - sunsetStart);
-        skyColor = colors.noon.clone().lerp(colors.sunset, t).lerp(colors.midnight, t * 0.5);
-        sunIntensity = 1 - t;
-        ambientIntensity = 0.5 - (t * 0.3);
-    } else { // Noite
-        // Transição da Noite (entre sunsetEnd e dawnStart)
-        let t;
-        if (timeOfDay >= sunsetEnd) {
-            t = (timeOfDay - sunsetEnd) / (24 - sunsetEnd + dawnStart);
+        if (t < 0.5) {
+            skyColor = colors.noon.clone().lerp(colors.sunset, t * 2);
         } else {
-            t = (timeOfDay + (24 - sunsetEnd)) / (24 - sunsetEnd + dawnStart);
+            skyColor = colors.sunset.clone().lerp(colors.midnight, (t - 0.5) * 2);
         }
-        skyColor = colors.sunset.clone().lerp(colors.midnight, Math.min(t * 2, 1));
-        sunIntensity = 0.05;
-        ambientIntensity = 0.2;
+        sunIntensity = 1 - t;
+        ambientIntensity = 0.5 - (t * 0.4);
+    } else { // Noite (20h às 05h)
+        skyColor = colors.midnight;
+        sunIntensity = 0.01;
+        ambientIntensity = 0.1;
     }
 
     scene.background = skyColor;

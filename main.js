@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // --- CONFIGURAÇÃO INICIAL ---
 const scene = new THREE.Scene();
@@ -73,6 +74,10 @@ const elements = {
     waterSpeed: document.getElementById('water-speed'),
     waterIntensity: document.getElementById('water-intensity'),
     waterOpacity: document.getElementById('water-opacity'),
+
+    // HUD
+    countWood: document.getElementById('count-wood'),
+    countStone: document.getElementById('count-stone'),
 
     // Presets
     btnSavePreset: document.getElementById('btn-save-preset'),
@@ -184,9 +189,13 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 
-// --- ILUMINAÇÃO ---
+// --- ILUMINAÇÃO E ATMOSFERA ---
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambientLight);
+
+// Neblina para esconder o horizonte
+const fog = new THREE.FogExp2(0x000000, 0.015);
+scene.fog = fog;
 
 const sunLight = new THREE.DirectionalLight(0xffffff, 1);
 sunLight.position.set(5, 10, 5);
@@ -226,6 +235,11 @@ function initTerrain() {
         scene.remove(water);
         water.geometry.dispose();
     }
+    const oldSky = scene.getObjectByName("skydome");
+    if (oldSky) {
+        scene.remove(oldSky);
+        oldSky.geometry.dispose();
+    }
 
     floorGeometry = new THREE.PlaneGeometry(size, size, quality, quality);
     const vertices = floorGeometry.attributes.position.array;
@@ -260,11 +274,23 @@ function initTerrain() {
     floor.receiveShadow = true;
     scene.add(floor);
 
-    waterGeometry = new THREE.PlaneGeometry(size, size, quality, quality);
+    // Água circular e muito maior para esconder as bordas
+    waterGeometry = new THREE.CircleGeometry(size * 4, 32);
     water = new THREE.Mesh(waterGeometry, waterMaterial);
     water.rotation.x = -Math.PI / 2;
     water.receiveShadow = true;
     scene.add(water);
+
+    // Skydome para profundidade
+    const skyGeo = new THREE.SphereGeometry(size * 5, 32, 15);
+    const skyMat = new THREE.MeshBasicMaterial({
+        side: THREE.BackSide,
+        transparent: true,
+        opacity: 0.8
+    });
+    const sky = new THREE.Mesh(skyGeo, skyMat);
+    sky.name = "skydome";
+    scene.add(sky);
 
     updateTerrainVisuals();
 }
@@ -296,24 +322,193 @@ function updateTerrainVisuals() {
     water.position.y = settings.terrain.waterLevel;
 }
 
+// --- SISTEMA DE RECURSOS E INVENTÁRIO ---
+const resources = [];
+const inventory = { wood: 0, stone: 0 };
+
+function updateHUD() {
+    elements.countWood.innerText = inventory.wood;
+    elements.countStone.innerText = inventory.stone;
+}
+
+function spawnResources() {
+    // Limpar recursos antigos
+    resources.forEach(res => scene.remove(res));
+    resources.length = 0;
+
+    const { size, grassLevel } = settings.terrain;
+    const count = 30; // Quantidade de árvores/pedras
+
+    for (let i = 0; i < count; i++) {
+        const x = (Math.random() - 0.5) * size;
+        const z = (Math.random() - 0.5) * size;
+
+        // Encontrar altura no terreno (aproximação via grid)
+        const height = getTerrainHeight(x, z);
+
+        if (height >= grassLevel) {
+            const type = Math.random() > 0.3 ? 'tree' : 'rock';
+            const res = type === 'tree' ? createTreeMesh() : createRockMesh();
+            res.position.set(x, height, z);
+            res.userData = { type, health: 3 };
+            scene.add(res);
+            resources.push(res);
+        }
+    }
+}
+
+function getTerrainHeight(x, z) {
+    if (!floorGeometry) return 0;
+    const size = settings.terrain.size;
+    const quality = settings.terrain.quality;
+
+    // Converter world coord para grid index
+    const col = Math.round(((x / size) + 0.5) * quality);
+    const row = Math.round(((z / size) + 0.5) * quality);
+
+    const index = (row * (quality + 1) + col) * 3;
+    const vertices = floorGeometry.attributes.position.array;
+
+    return vertices[index + 2] || 0;
+}
+
+function createTreeMesh() {
+    const group = new THREE.Group();
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 1, 6), new THREE.MeshStandardMaterial({ color: 0x5d4037 }));
+    trunk.position.y = 0.5;
+    const leaves = new THREE.Mesh(new THREE.ConeGeometry(0.8, 2, 6), new THREE.MeshStandardMaterial({ color: 0x2e7d32, flatShading: true }));
+    leaves.position.y = 1.8;
+    group.add(trunk, leaves);
+    group.traverse(c => { if(c.isMesh) c.castShadow = true; });
+    return group;
+}
+
+function createRockMesh() {
+    const geo = new THREE.DodecahedronGeometry(0.5 + Math.random() * 0.5, 0);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x757575, flatShading: true });
+    const rock = new THREE.Mesh(geo, mat);
+    rock.position.y = 0.2;
+    rock.rotation.set(Math.random(), Math.random(), Math.random());
+    rock.castShadow = true;
+    return rock;
+}
+
+function tryHarvest() {
+    if (settings.camera.mode !== 'follow') return;
+
+    // Achar recurso mais próximo
+    let closest = null;
+    let minDist = 2.5;
+
+    resources.forEach(res => {
+        const dist = playerGroup.position.distanceTo(res.position);
+        if (dist < minDist) {
+            minDist = dist;
+            closest = res;
+        }
+    });
+
+    if (closest) {
+        // Olhar para o recurso
+        playerGroup.lookAt(closest.position.x, playerGroup.position.y, closest.position.z);
+
+        // Tentar animação de ação
+        // Verificando nomes comuns em RobotExpressive: Punch, Jump, Dance
+        const actionName = animations['punch'] ? 'punch' : (animations['jump'] ? 'jump' : 'idle');
+        fadeToAction(actionName, 0.1);
+
+        setTimeout(() => {
+            closest.userData.health -= 1;
+
+            // Feedback visual (shake)
+            closest.position.x += (Math.random() - 0.5) * 0.2;
+            closest.position.z += (Math.random() - 0.5) * 0.2;
+
+            if (closest.userData.health <= 0) {
+                if (closest.userData.type === 'tree') inventory.wood += 5;
+                else inventory.stone += 5;
+
+                scene.remove(closest);
+                resources.splice(resources.indexOf(closest), 1);
+                updateHUD();
+            }
+
+            // Volta para idle após um tempo
+            setTimeout(() => fadeToAction('idle'), 500);
+        }, 300);
+    }
+}
+
 function regenerateTerrain() {
     initTerrain();
+    spawnResources();
 }
 
 initTerrain();
+spawnResources();
 
-// --- ELEMENTOS DO MUNDO (JOGADOR) ---
-const player = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 2, 1),
-    new THREE.MeshStandardMaterial({ color: 0xff0000 })
-);
-player.position.y = 5; // Começar alto para não cair do mapa
-player.castShadow = true;
-scene.add(player);
+// --- SISTEMA DE PERSONAGEM ---
+let playerModel = null;
+let mixer = null;
+let animations = {};
+let currentAction = null;
+
+const playerGroup = new THREE.Group();
+playerGroup.position.y = 5;
+scene.add(playerGroup);
+
+// Placeholder para o Jogador (caso o GLB demore ou falhe)
+const playerPlaceholder = new THREE.Group();
+const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 4, 8), new THREE.MeshStandardMaterial({ color: 0xff4444 }));
+body.position.y = 0.9;
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffdbac }));
+head.position.y = 1.6;
+playerPlaceholder.add(body, head);
+playerPlaceholder.traverse(child => { if(child.isMesh) child.castShadow = true; });
+playerGroup.add(playerPlaceholder);
+
+const loader = new GLTFLoader();
+// URL de exemplo (RobotExpressive é ótimo para testes low-poly/stylized)
+const MODEL_URL = 'https://threejs.org/examples/models/gltf/RobotExpressive.glb';
+
+loader.load(MODEL_URL, (gltf) => {
+    playerGroup.remove(playerPlaceholder);
+    playerModel = gltf.scene;
+    playerModel.scale.set(0.4, 0.4, 0.4);
+    playerModel.traverse(child => { if(child.isMesh) child.castShadow = true; });
+    playerGroup.add(playerModel);
+
+    mixer = new THREE.AnimationMixer(playerModel);
+    gltf.animations.forEach(clip => {
+        animations[clip.name.toLowerCase()] = mixer.clipAction(clip);
+    });
+
+    fadeToAction('idle');
+}, undefined, (error) => {
+    console.error('Erro ao carregar modelo:', error);
+    // Mantém o placeholder se falhar
+});
+
+function fadeToAction(name, duration = 0.2) {
+    if (!animations[name] || currentAction === animations[name]) return;
+
+    const previousAction = currentAction;
+    currentAction = animations[name];
+
+    if (previousAction) previousAction.fadeOut(duration);
+    currentAction.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(duration).play();
+}
 
 // --- CONTROLES ---
 const keys = {};
-window.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
+window.addEventListener('keydown', (e) => {
+    const key = e.key.toLowerCase();
+    keys[key] = true;
+
+    if (key === ' ' || key === 'f') {
+        tryHarvest();
+    }
+});
 window.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
 
 const playerSpeed = 0.2;
@@ -332,21 +527,51 @@ window.addEventListener('mousemove', (e) => {
     }
 });
 
-function updateMovement() {
+let playerVelocity = new THREE.Vector3();
+const ACCELERATION = 0.02;
+const FRICTION = 0.9;
+
+function updateMovement(delta) {
     if (settings.camera.mode === 'follow') {
         const moveX = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
         const moveZ = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
-        if (moveX !== 0 || moveZ !== 0) {
-            const angle = Math.atan2(moveX, moveZ);
-            player.position.x += Math.sin(angle) * playerSpeed;
-            player.position.z += Math.cos(angle) * playerSpeed;
-            player.rotation.y = angle;
-        }
-        // Raycast simples para altura do terreno (placeholder)
-        player.position.y = 1.5;
 
-        camera.position.lerp(new THREE.Vector3(player.position.x + 15, player.position.y + 15, player.position.z + 15), 0.05);
-        camera.lookAt(player.position);
+        const isMoving = moveX !== 0 || moveZ !== 0;
+
+        if (isMoving) {
+            const targetAngle = Math.atan2(moveX, moveZ);
+            // Rotação suave
+            const currentRotation = playerGroup.rotation.y;
+            let diff = targetAngle - currentRotation;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            playerGroup.rotation.y += diff * 0.15;
+
+            playerVelocity.x += Math.sin(targetAngle) * ACCELERATION;
+            playerVelocity.z += Math.cos(targetAngle) * ACCELERATION;
+
+            fadeToAction('walking' || 'walk' || 'run');
+        } else {
+            fadeToAction('idle');
+        }
+
+        playerVelocity.multiplyScalar(FRICTION);
+
+        // Bloquear movimento se estiver colhendo (animação de ação)
+        const isAction = currentAction && (currentAction.getClip().name.toLowerCase().includes('punch') || currentAction.getClip().name.toLowerCase().includes('jump'));
+        if (!isAction) {
+            playerGroup.position.add(playerVelocity);
+        }
+
+        // Altura do terreno dinâmica
+        const h = getTerrainHeight(playerGroup.position.x, playerGroup.position.z);
+    // Altura mínima é o nível da água
+    const targetY = Math.max(settings.terrain.waterLevel, h);
+    playerGroup.position.y = THREE.MathUtils.lerp(playerGroup.position.y, targetY, 0.2);
+
+    // Câmera mais baixa e próxima para melhor visual RPG
+    camera.position.lerp(new THREE.Vector3(playerGroup.position.x + 10, playerGroup.position.y + 10, playerGroup.position.z + 10), 0.05);
+        camera.lookAt(playerGroup.position);
     } else {
         const moveX = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
         const moveZ = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
@@ -409,6 +634,11 @@ function updateEnvironment(time) {
     }
 
     scene.background = skyColor;
+    if (scene.fog) scene.fog.color.copy(skyColor);
+
+    const skydome = scene.getObjectByName("skydome");
+    if (skydome) skydome.material.color.copy(skyColor);
+
     sunLight.intensity = sunInt;
     ambientLight.intensity = ambInt;
 
@@ -508,11 +738,17 @@ elements.btnResetDefaults.addEventListener('click', () => {
     }
 });
 
+const clock = new THREE.Clock();
+
 // Loop principal
 function animate(time) {
     requestAnimationFrame(animate);
+    const delta = clock.getDelta();
+
+    if (mixer) mixer.update(delta);
+
     updateEnvironment(time);
-    updateMovement();
+    updateMovement(delta);
     renderer.render(scene, camera);
 }
 

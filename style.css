@@ -13,12 +13,42 @@ body {
 /* UI Styles */
 #ui-layer {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: white;
     pointer-events: none;
     z-index: 100;
+}
+
+#inventory-hud {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    gap: 15px;
+    pointer-events: auto;
+}
+
+.resource-item {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px 20px;
+    border-radius: 30px;
+    border: 1px solid #ffd700;
+    font-size: 18px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+#settings-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
 }
 
 .ui-button {

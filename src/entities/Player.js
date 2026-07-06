@@ -7,15 +7,17 @@ export class Player {
         this.scene = scene;
         this.terrain = terrain;
         this.group = new THREE.Group();
-        this.group.position.y = 5;
+        this.group.position.set(0, 5, 0);
         this.scene.add(this.group);
 
         this.mixer = null;
         this.animations = {};
         this.currentAction = null;
         this.velocity = new THREE.Vector3();
-        this.acceleration = 0.05; // Slightly increased for responsiveness
+        this.acceleration = 0.05;
         this.friction = 0.85;
+
+        // Consistent inventory keys
         this.inventory = { wood: 0, stone: 0 };
 
         this.keys = {};
@@ -64,29 +66,27 @@ export class Player {
         if (this.mixer) this.mixer.update(delta);
         if (Settings.camera.mode === 'free') return;
 
+        // Safety: default to 0 if undefined
+        const rotY = cameraRotationY || 0;
+
         const moveX = (this.keys.d ? 1 : 0) - (this.keys.a ? 1 : 0);
         const moveZ = (this.keys.s ? 1 : 0) - (this.keys.w ? 1 : 0);
         const isMoving = moveX !== 0 || moveZ !== 0;
 
         if (isMoving) {
-            // angle relative to player's current orientation
             const inputAngle = Math.atan2(moveX, moveZ);
-            // target orientation is input angle + camera horizontal rotation
-            const targetAngle = inputAngle + cameraRotationY;
+            const targetAngle = inputAngle + rotY;
 
-            // Rotate player group toward target angle smoothly
             let diff = targetAngle - this.group.rotation.y;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
             this.group.rotation.y += diff * 0.15;
 
-            // Apply acceleration in the target direction
             this.velocity.x += Math.sin(targetAngle) * this.acceleration;
             this.velocity.z += Math.cos(targetAngle) * this.acceleration;
 
             if (Settings.camera.mode === 'firstperson') {
-                // In first person, player mesh follows camera theta exactly
-                this.group.rotation.y = cameraRotationY + Math.PI; // Face forward
+                this.group.rotation.y = rotY + Math.PI;
             }
 
             this.fadeToAction('walking');
@@ -97,12 +97,18 @@ export class Player {
         this.velocity.multiplyScalar(this.friction);
 
         const isAction = this.currentAction && (this.currentAction.getClip().name.toLowerCase().includes('punch') || this.currentAction.getClip().name.toLowerCase().includes('jump'));
+
         if (!isAction) {
-            this.group.position.add(this.velocity);
+            // Final safety check for NaN
+            if (!isNaN(this.velocity.x) && !isNaN(this.velocity.z)) {
+                this.group.position.add(this.velocity);
+            }
         }
 
         const h = this.terrain.getHeight(this.group.position.x, this.group.position.z);
-        this.group.position.y = THREE.MathUtils.lerp(this.group.position.y, h, 0.2);
+        if (!isNaN(h)) {
+            this.group.position.y = THREE.MathUtils.lerp(this.group.position.y, h, 0.2);
+        }
     }
 
     get position() { return this.group.position; }

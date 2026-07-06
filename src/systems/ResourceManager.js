@@ -8,8 +8,8 @@ export class ResourceManager {
         this.resources = [];
 
         this.models = {
-            tree: this.createTreeModel(),
-            rock: this.createRockModel()
+            wood: this.createTreeModel(), // Map 'wood' to tree
+            stone: this.createRockModel()  // Map 'stone' to rock
         };
 
         this.spawnAll();
@@ -17,14 +17,12 @@ export class ResourceManager {
 
     createTreeModel() {
         const group = new THREE.Group();
-        // Trunk - stylized medieval wood
         const trunk = new THREE.Mesh(
             new THREE.CylinderGeometry(0.2, 0.4, 2, 6),
             new THREE.MeshStandardMaterial({ color: 0x4a2c2a, flatShading: true })
         );
         trunk.position.y = 1;
 
-        // Leaves - low poly layers
         const leaves1 = new THREE.Mesh(
             new THREE.ConeGeometry(1.2, 1.5, 6),
             new THREE.MeshStandardMaterial({ color: 0x2d5a27, flatShading: true })
@@ -49,7 +47,6 @@ export class ResourceManager {
             new THREE.MeshStandardMaterial({ color: 0x7a7a7a, flatShading: true })
         );
         rock.scale.set(1, 0.6, 1.2);
-        rock.rotation.set(Math.random(), Math.random(), Math.random());
         group.add(rock);
         group.traverse(c => { if(c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
         return group;
@@ -57,8 +54,8 @@ export class ResourceManager {
 
     spawnAll() {
         this.clear();
-        for (let i = 0; i < Settings.resources.maxTrees; i++) this.spawn('tree');
-        for (let i = 0; i < Settings.resources.maxRocks; i++) this.spawn('rock');
+        for (let i = 0; i < Settings.resources.maxTrees; i++) this.spawn('wood');
+        for (let i = 0; i < Settings.resources.maxRocks; i++) this.spawn('stone');
     }
 
     clear() {
@@ -82,7 +79,6 @@ export class ResourceManager {
             this.scene.add(mesh);
             this.resources.push({ type, mesh, health: 100 });
         } else {
-            // Try again if in water/sand
             if (this.resources.length < (Settings.resources.maxTrees + Settings.resources.maxRocks)) {
                 setTimeout(() => this.spawn(type), 1);
             }
@@ -95,9 +91,8 @@ export class ResourceManager {
             const res = this.resources[i];
             const dist = position.distanceTo(res.mesh.position);
             if (dist < radius) {
-                res.health -= 50; // 2 hits to harvest
+                res.health -= 50;
 
-                // Visual feedback (shake)
                 const originalX = res.mesh.position.x;
                 res.mesh.position.x += (Math.random() - 0.5) * 0.2;
                 setTimeout(() => {
@@ -106,9 +101,8 @@ export class ResourceManager {
 
                 if (res.health <= 0) {
                     this.scene.remove(res.mesh);
-                    harvested = res.type;
+                    harvested = res.type; // Returns 'wood' or 'stone'
                     this.resources.splice(i, 1);
-                    // Respawn after some time
                     setTimeout(() => this.spawn(res.type), 10000);
                 }
                 break;

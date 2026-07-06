@@ -151,7 +151,10 @@ export class UIManager {
             this.showModal(
                 "Destruição Total",
                 "Tem certeza que deseja resetar todo o mundo? Esta ação é irreversível!",
-                () => location.reload()
+                () => {
+                    localStorage.removeItem('rpg_medieval_save');
+                    location.reload();
+                }
             );
         });
 
@@ -238,8 +241,9 @@ export class UIManager {
     }
 
     update() {
-        if (this.elements.woodCount) this.elements.woodCount.innerText = this.game.player.inventory.tree;
-        if (this.elements.stoneCount) this.elements.stoneCount.innerText = this.game.player.inventory.rock;
+        // Correcting the resource keys based on Player.js inventory structure
+        if (this.elements.woodCount) this.elements.woodCount.innerText = this.game.player.inventory.tree || this.game.player.inventory.wood || 0;
+        if (this.elements.stoneCount) this.elements.stoneCount.innerText = this.game.player.inventory.rock || this.game.player.inventory.stone || 0;
 
         const h = Math.floor(Settings.time.timeOfDay);
         const m = Math.floor((Settings.time.timeOfDay % 1) * 60);

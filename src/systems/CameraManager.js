@@ -7,11 +7,9 @@ export class CameraManager {
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.engine.camera = this.camera;
 
-        // Internal state for orbit/rotation (Spherical Coordinates)
-        // theta: horizontal rotation (around Y axis)
-        // phi: vertical rotation (elevation)
-        this.theta = Settings.camera.rotation.y;
-        this.phi = Settings.camera.rotation.x;
+        // Ensure values are initialized and not NaN
+        this.theta = Settings.camera.rotation?.y ?? Math.PI / 4;
+        this.phi = Settings.camera.rotation?.x ?? -Math.PI / 4;
 
         this.keys = {};
         window.addEventListener('keydown', (e) => this.keys[e.key.toLowerCase()] = true);
@@ -32,7 +30,7 @@ export class CameraManager {
         window.addEventListener('contextmenu', (e) => e.preventDefault());
         window.addEventListener('mousemove', (e) => this.onMouseMove(e));
 
-        this.currentFollowPos = new THREE.Vector3();
+        this.currentFollowPos = new THREE.Vector3(0, 0, 0);
     }
 
     onMouseMove(e) {
@@ -42,11 +40,9 @@ export class CameraManager {
 
         if (canRotate) {
             const sensitivity = 0.003;
-            // standard FPS/ThirdPerson behavior: movementX rotates around Y (theta), movementY rotates around X (phi)
             this.theta -= e.movementX * sensitivity;
             this.phi -= e.movementY * sensitivity;
 
-            // Global phi clamping to avoid gimbal lock/flipping
             const limit = Math.PI / 2 - 0.05;
             this.phi = Math.max(-limit, Math.min(limit, this.phi));
         }
@@ -54,9 +50,13 @@ export class CameraManager {
 
     update(delta, player) {
         const camSet = Settings.camera;
-        const pPos = player ? player.position.clone() : new THREE.Vector3();
+        const pPos = player ? player.position.clone() : new THREE.Vector3(0, 0, 0);
 
-        // Smooth target tracking for the camera focus point
+        // Safety: check for NaN in player position
+        if (isNaN(pPos.x) || isNaN(pPos.y) || isNaN(pPos.z)) {
+            pPos.set(0, 0, 0);
+        }
+
         const lerpFactor = 0.1;
         this.currentFollowPos.lerp(pPos, lerpFactor);
 
@@ -77,40 +77,38 @@ export class CameraManager {
     }
 
     updateIsometric(camSet) {
-        // Isometric: Fixed vertical angle (approx 35.26 deg) but allow horizontal orbit
         const isoPhi = -0.615;
-        const dist = camSet.distance;
+        const dist = camSet.distance || 12;
 
-        // Calculate position based on theta (user orbit) and fixed isoPhi
         const x = this.currentFollowPos.x + dist * Math.sin(this.theta) * Math.cos(isoPhi);
         const y = this.currentFollowPos.y + dist * Math.sin(-isoPhi);
         const z = this.currentFollowPos.z + dist * Math.cos(this.theta) * Math.cos(isoPhi);
 
-        this.camera.position.set(x, y, z);
-        this.camera.lookAt(this.currentFollowPos.x, this.currentFollowPos.y + camSet.verticalOffset, this.currentFollowPos.z);
+        if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+            this.camera.position.set(x, y, z);
+            this.camera.lookAt(this.currentFollowPos.x, this.currentFollowPos.y + (camSet.verticalOffset || 0), this.currentFollowPos.z);
+        }
     }
 
     updateThirdPerson(camSet, pPos) {
-        const dist = camSet.distance;
-        // Third Person: True spherical orbit around the player
-        // We use this.phi for elevation
+        const dist = camSet.distance || 12;
         const x = pPos.x + dist * Math.sin(this.theta) * Math.cos(this.phi);
-        const y = pPos.y + camSet.verticalOffset + dist * Math.sin(this.phi);
+        const y = pPos.y + (camSet.verticalOffset || 0) + dist * Math.sin(this.phi);
         const z = pPos.z + dist * Math.cos(this.theta) * Math.cos(this.phi);
 
-        this.camera.position.set(x, y, z);
-        this.camera.lookAt(pPos.x, pPos.y + camSet.verticalOffset, pPos.z);
+        if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+            this.camera.position.set(x, y, z);
+            this.camera.lookAt(pPos.x, pPos.y + (camSet.verticalOffset || 0), pPos.z);
+        }
     }
 
     updateFirstPerson(pPos) {
         this.camera.position.copy(pPos);
-        this.camera.position.y += 1.6; // Eye level
+        this.camera.position.y += 1.6;
 
-        // First Person: Rotation is direct from theta/phi
         this.camera.rotation.order = 'YXZ';
         this.camera.rotation.set(this.phi, this.theta, 0);
 
-        // Offset slightly forward to avoid clipping through the player mesh
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
         this.camera.position.add(forward.multiplyScalar(0.2));
     }
@@ -121,7 +119,6 @@ export class CameraManager {
         const moveZ = (this.keys.s ? 1 : 0) - (this.keys.w ? 1 : 0);
         const moveY = (this.keys.q || this.keys.pageup ? 1 : 0) - (this.keys.e || this.keys.pagedown ? 1 : 0);
 
-        // Movement is relative to current rotation
         const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(this.phi, this.theta, 0, 'YXZ'));
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
         const right = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
@@ -134,6 +131,6 @@ export class CameraManager {
     }
 
     getYRotation() {
-        return this.theta;
+        return this.theta || 0;
     }
 }

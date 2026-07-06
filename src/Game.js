@@ -21,6 +21,7 @@ class Game {
             if (e.key.toLowerCase() === 'f' || e.code === 'Space') {
                 const item = this.resources.harvestAt(this.player.position, 2.5);
                 if (item) {
+                    // Normalize item name if necessary, though ResourceManager returns 'tree' or 'rock'
                     this.player.inventory[item]++;
                     this.player.fadeToAction('punch', 0.1);
                     setTimeout(() => this.player.fadeToAction('idle', 0.5), 500);
@@ -53,7 +54,9 @@ class Game {
         this.updateTime();
         this.environment.update(Settings.time.timeOfDay);
         this.terrain.updateWater(time);
-        this.player.update(delta, this.cameraManager.rotation);
+
+        // Pass the theta rotation value for camera-relative movement
+        this.player.update(delta, this.cameraManager.getYRotation());
         this.cameraManager.update(delta, this.player);
         this.ui.update();
 

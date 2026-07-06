@@ -39,7 +39,13 @@ export class UIManager {
             btnResetDefaults: document.getElementById('btn-reset-defaults'),
             importArea: document.getElementById('import-json-area'),
             woodCount: document.getElementById('count-wood'),
-            stoneCount: document.getElementById('count-stone')
+            stoneCount: document.getElementById('count-stone'),
+            // Modal
+            modal: document.getElementById('global-modal'),
+            modalTitle: document.getElementById('modal-title'),
+            modalMessage: document.getElementById('modal-message'),
+            modalCancel: document.getElementById('modal-cancel'),
+            modalConfirm: document.getElementById('modal-confirm')
         };
 
         this.init();
@@ -119,13 +125,74 @@ export class UIManager {
 
         // Presets
         this.elements.btnSavePreset.addEventListener('click', () => {
-            localStorage.setItem('rpg_medieval_save', JSON.stringify(this.getPreset()));
-            alert('Progresso Salvo no Reino!');
+            this.showModal(
+                "Santuário de Memórias",
+                "Desejas gravar o progresso atual do seu reino nos pergaminhos locais?",
+                () => {
+                    localStorage.setItem('rpg_medieval_save', JSON.stringify(this.getPreset()));
+                }
+            );
         });
+
         this.elements.btnLoadPreset.addEventListener('click', () => {
             const data = localStorage.getItem('rpg_medieval_save');
-            if (data) this.applyPreset(JSON.parse(data));
+            if (data) {
+                this.showModal(
+                    "Restaurar Reino",
+                    "Desejas carregar o estado salvo? O progresso atual será perdido.",
+                    () => this.applyPreset(JSON.parse(data))
+                );
+            } else {
+                this.showModal("Aviso", "Nenhum pergaminho de salvamento encontrado.", null, false);
+            }
         });
+
+        this.elements.btnResetDefaults.addEventListener('click', () => {
+            this.showModal(
+                "Destruição Total",
+                "Tem certeza que deseja resetar todo o mundo? Esta ação é irreversível!",
+                () => location.reload()
+            );
+        });
+
+        // JSON Actions
+        this.elements.btnExportJSON.addEventListener('click', () => {
+            const json = JSON.stringify(this.getPreset(), null, 4);
+            this.elements.importArea.value = json;
+            navigator.clipboard.writeText(json);
+            this.showModal("Exportação", "JSON copiado para a área de transferência!", null, false);
+        });
+
+        this.elements.btnImportJSON.addEventListener('click', () => {
+            try {
+                const data = JSON.parse(this.elements.importArea.value);
+                this.applyPreset(data);
+                this.showModal("Sucesso", "Configurações importadas com sucesso!", null, false);
+            } catch (e) {
+                this.showModal("Erro", "Falha ao ler o JSON. Verifique o pergaminho.", null, false);
+            }
+        });
+    }
+
+    showModal(title, message, onConfirm = null, showCancel = true) {
+        this.elements.modalTitle.innerText = title;
+        this.elements.modalMessage.innerText = message;
+        this.elements.modalCancel.style.display = showCancel ? 'block' : 'none';
+
+        this.elements.modal.classList.add('active');
+
+        const close = () => {
+            this.elements.modal.classList.remove('active');
+            this.elements.modalConfirm.onclick = null;
+            this.elements.modalCancel.onclick = null;
+        };
+
+        this.elements.modalConfirm.onclick = () => {
+            if (onConfirm) onConfirm();
+            close();
+        };
+
+        this.elements.modalCancel.onclick = close;
     }
 
     getPreset() {

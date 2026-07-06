@@ -19,6 +19,8 @@ export class CameraManager {
         window.addEventListener('mouseup', (e) => { if (e.button === 2) this.isRightMouseDown = false; });
         window.addEventListener('contextmenu', (e) => e.preventDefault());
         window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+
+        this.currentFollowY = 0;
     }
 
     onMouseMove(e) {
@@ -46,25 +48,29 @@ export class CameraManager {
 
         switch (camSet.mode) {
             case 'isometric':
-                // Smooth follow without jitter - using immediate position for follow, but lerp for rotation if needed
+                // Use a heavy lerp for Y to stabilize height on uneven terrain
+                const targetY = pPos.y;
+                if (isNaN(this.currentFollowY)) this.currentFollowY = targetY;
+                this.currentFollowY = THREE.MathUtils.lerp(this.currentFollowY, targetY, 0.05);
+
                 const isoX = pPos.x + Math.sin(this.rotation.y) * camSet.distance;
                 const isoZ = pPos.z + Math.cos(this.rotation.y) * camSet.distance;
-                // Move camera position immediately to follow player without lag/jitter
-                this.camera.position.set(isoX, pPos.y + camSet.height, isoZ);
-                this.camera.lookAt(pPos.x, pPos.y, pPos.z);
+
+                this.camera.position.set(isoX, this.currentFollowY + camSet.height, isoZ);
+                this.camera.lookAt(pPos.x, this.currentFollowY + camSet.verticalOffset, pPos.z);
                 break;
 
             case 'thirdperson':
                 const orbitDist = camSet.distance;
-                // Fix: Correct orbital calculation
-                const theta = this.rotation.y;
-                const phi = this.rotation.x;
+                const theta3 = this.rotation.y;
+                // Clamp X rotation to avoid flipping or going under ground too much
+                const phi3 = Math.max(-Math.PI / 3, Math.min(Math.PI / 4, this.rotation.x));
 
-                const camX3 = pPos.x + orbitDist * Math.sin(theta) * Math.cos(phi);
-                const camY3 = pPos.y + camSet.verticalOffset + orbitDist * Math.sin(phi);
-                const camZ3 = pPos.z + orbitDist * Math.cos(theta) * Math.cos(phi);
+                const camX3 = pPos.x + orbitDist * Math.sin(theta3) * Math.cos(phi3);
+                const camY3 = pPos.y + camSet.verticalOffset + orbitDist * Math.sin(phi3);
+                const camZ3 = pPos.z + orbitDist * Math.cos(theta3) * Math.cos(phi3);
 
-                this.camera.position.copy(new THREE.Vector3(camX3, camY3, camZ3));
+                this.camera.position.set(camX3, camY3, camZ3);
                 this.camera.lookAt(pPos.x, pPos.y + camSet.verticalOffset, pPos.z);
                 break;
 

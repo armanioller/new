@@ -29,6 +29,8 @@ class Game {
         });
 
         this.animate();
+        window.game = this; // Expose for debugging and testing
+        window.Settings = Settings;
     }
 
     updateTime() {

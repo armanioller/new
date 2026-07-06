@@ -91,7 +91,8 @@ export class Player {
         if (!isAction) this.group.position.add(this.velocity);
 
         const h = this.terrain.getHeight(this.group.position.x, this.group.position.z);
-        this.group.position.y = THREE.MathUtils.lerp(this.group.position.y, Math.max(Settings.terrain.waterLevel, h), 0.2);
+        // Fix: Player sinks in water (walks on the floor) instead of floating on the surface
+        this.group.position.y = THREE.MathUtils.lerp(this.group.position.y, h, 0.2);
     }
 
     get position() { return this.group.position; }

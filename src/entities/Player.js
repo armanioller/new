@@ -14,9 +14,9 @@ export class Player {
         this.animations = {};
         this.currentAction = null;
         this.velocity = new THREE.Vector3();
-        this.acceleration = 0.02;
+        this.acceleration = 0.05; // Slightly increased for responsiveness
         this.friction = 0.85;
-        this.inventory = { tree: 0, rock: 0 };
+        this.inventory = { wood: 0, stone: 0 };
 
         this.keys = {};
         window.addEventListener('keydown', (e) => this.keys[e.key.toLowerCase()] = true);
@@ -28,9 +28,9 @@ export class Player {
 
     initPlaceholder() {
         this.placeholder = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 4, 8), new THREE.MeshStandardMaterial({ color: 0xcd7f32 })); // Bronze
+        const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 4, 8), new THREE.MeshStandardMaterial({ color: 0xcd7f32 }));
         body.position.y = 0.9;
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshStandardMaterial({ color: 0xc0c0c0 })); // Silver
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshStandardMaterial({ color: 0xc0c0c0 }));
         head.position.y = 1.6;
         this.placeholder.add(body, head);
         this.placeholder.traverse(c => { if(c.isMesh) c.castShadow = true; });
@@ -60,7 +60,7 @@ export class Player {
         this.currentAction.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(duration).play();
     }
 
-    update(delta, cameraRotation) {
+    update(delta, cameraRotationY) {
         if (this.mixer) this.mixer.update(delta);
         if (Settings.camera.mode === 'free') return;
 
@@ -69,17 +69,26 @@ export class Player {
         const isMoving = moveX !== 0 || moveZ !== 0;
 
         if (isMoving) {
-            const angleOffset = Math.atan2(moveX, moveZ);
-            const targetAngle = angleOffset + cameraRotation.y;
+            // angle relative to player's current orientation
+            const inputAngle = Math.atan2(moveX, moveZ);
+            // target orientation is input angle + camera horizontal rotation
+            const targetAngle = inputAngle + cameraRotationY;
 
-            const currentRot = this.group.rotation.y;
-            let diff = targetAngle - currentRot;
+            // Rotate player group toward target angle smoothly
+            let diff = targetAngle - this.group.rotation.y;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
             this.group.rotation.y += diff * 0.15;
 
+            // Apply acceleration in the target direction
             this.velocity.x += Math.sin(targetAngle) * this.acceleration;
             this.velocity.z += Math.cos(targetAngle) * this.acceleration;
+
+            if (Settings.camera.mode === 'firstperson') {
+                // In first person, player mesh follows camera theta exactly
+                this.group.rotation.y = cameraRotationY + Math.PI; // Face forward
+            }
+
             this.fadeToAction('walking');
         } else {
             this.fadeToAction('idle');
@@ -88,10 +97,11 @@ export class Player {
         this.velocity.multiplyScalar(this.friction);
 
         const isAction = this.currentAction && (this.currentAction.getClip().name.toLowerCase().includes('punch') || this.currentAction.getClip().name.toLowerCase().includes('jump'));
-        if (!isAction) this.group.position.add(this.velocity);
+        if (!isAction) {
+            this.group.position.add(this.velocity);
+        }
 
         const h = this.terrain.getHeight(this.group.position.x, this.group.position.z);
-        // Fix: Player sinks in water (walks on the floor) instead of floating on the surface
         this.group.position.y = THREE.MathUtils.lerp(this.group.position.y, h, 0.2);
     }
 

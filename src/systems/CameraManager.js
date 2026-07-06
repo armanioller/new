@@ -7,101 +7,133 @@ export class CameraManager {
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.engine.camera = this.camera;
 
-        this.rotation = { ...Settings.camera.rotation };
-        this.targetRotation = { ...this.rotation };
+        // Internal state for orbit/rotation (Spherical Coordinates)
+        // theta: horizontal rotation (around Y axis)
+        // phi: vertical rotation (elevation)
+        this.theta = Settings.camera.rotation.y;
+        this.phi = Settings.camera.rotation.x;
 
         this.keys = {};
         window.addEventListener('keydown', (e) => this.keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', (e) => this.keys[e.key.toLowerCase()] = false);
 
         this.isRightMouseDown = false;
-        window.addEventListener('mousedown', (e) => { if (e.button === 2) this.isRightMouseDown = true; });
+
+        const canvas = this.engine.renderer.domElement;
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 2) this.isRightMouseDown = true;
+            if (e.button === 0 && Settings.camera.mode === 'firstperson') {
+                canvas.requestPointerLock();
+            }
+        });
+
         window.addEventListener('mouseup', (e) => { if (e.button === 2) this.isRightMouseDown = false; });
         window.addEventListener('contextmenu', (e) => e.preventDefault());
         window.addEventListener('mousemove', (e) => this.onMouseMove(e));
 
-        this.currentFollowY = 0;
+        this.currentFollowPos = new THREE.Vector3();
     }
 
     onMouseMove(e) {
         const mode = Settings.camera.mode;
-        const isControlMode = this.isRightMouseDown || mode === 'firstperson' || mode === 'thirdperson' || mode === 'free';
+        const isPointerLocked = document.pointerLockElement === this.engine.renderer.domElement;
+        const canRotate = this.isRightMouseDown || isPointerLocked || mode === 'free';
 
-        if (isControlMode) {
-            // Fix: Mouse rotation direction (now correct)
-            this.rotation.y += e.movementX * 0.005;
-            this.rotation.x -= e.movementY * 0.005;
-            this.rotation.x = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, this.rotation.x));
+        if (canRotate) {
+            const sensitivity = 0.003;
+            // standard FPS/ThirdPerson behavior: movementX rotates around Y (theta), movementY rotates around X (phi)
+            this.theta -= e.movementX * sensitivity;
+            this.phi -= e.movementY * sensitivity;
+
+            // Global phi clamping to avoid gimbal lock/flipping
+            const limit = Math.PI / 2 - 0.05;
+            this.phi = Math.max(-limit, Math.min(limit, this.phi));
         }
     }
 
     update(delta, player) {
         const camSet = Settings.camera;
-        const pPos = player ? player.position : new THREE.Vector3();
+        const pPos = player ? player.position.clone() : new THREE.Vector3();
 
-        // Keyboard rotation
-        if (this.keys.arrowleft) this.rotation.y += 0.03;
-        if (this.keys.arrowright) this.rotation.y -= 0.03;
-        if (this.keys.arrowup) this.rotation.x += 0.03;
-        if (this.keys.arrowdown) this.rotation.x -= 0.03;
-        this.rotation.x = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, this.rotation.x));
+        // Smooth target tracking for the camera focus point
+        const lerpFactor = 0.1;
+        this.currentFollowPos.lerp(pPos, lerpFactor);
 
         switch (camSet.mode) {
             case 'isometric':
-                // Use a heavy lerp for Y to stabilize height on uneven terrain
-                const targetY = pPos.y;
-                if (isNaN(this.currentFollowY)) this.currentFollowY = targetY;
-                this.currentFollowY = THREE.MathUtils.lerp(this.currentFollowY, targetY, 0.05);
-
-                const isoX = pPos.x + Math.sin(this.rotation.y) * camSet.distance;
-                const isoZ = pPos.z + Math.cos(this.rotation.y) * camSet.distance;
-
-                this.camera.position.set(isoX, this.currentFollowY + camSet.height, isoZ);
-                this.camera.lookAt(pPos.x, this.currentFollowY + camSet.verticalOffset, pPos.z);
+                this.updateIsometric(camSet);
                 break;
-
             case 'thirdperson':
-                const orbitDist = camSet.distance;
-                const theta3 = this.rotation.y;
-                // Clamp X rotation to avoid flipping or going under ground too much
-                const phi3 = Math.max(-Math.PI / 3, Math.min(Math.PI / 4, this.rotation.x));
-
-                const camX3 = pPos.x + orbitDist * Math.sin(theta3) * Math.cos(phi3);
-                const camY3 = pPos.y + camSet.verticalOffset + orbitDist * Math.sin(phi3);
-                const camZ3 = pPos.z + orbitDist * Math.cos(theta3) * Math.cos(phi3);
-
-                this.camera.position.set(camX3, camY3, camZ3);
-                this.camera.lookAt(pPos.x, pPos.y + camSet.verticalOffset, pPos.z);
+                this.updateThirdPerson(camSet, pPos);
                 break;
-
             case 'firstperson':
-                // Reset rotation order for FPS
-                this.camera.rotation.order = 'YXZ';
-
-                this.camera.position.copy(pPos);
-                this.camera.position.y += 1.6; // Eye level
-
-                // Set rotation
-                this.camera.rotation.set(this.rotation.x, this.rotation.y, 0);
-
-                // Move camera slightly forward so we don't see inside the mesh
-                const fpForward = new THREE.Vector3(0, 0, -0.15).applyQuaternion(this.camera.quaternion);
-                this.camera.position.add(fpForward);
+                this.updateFirstPerson(pPos);
                 break;
-
             case 'free':
-                const f_moveX = (this.keys.d ? 1 : 0) - (this.keys.a ? 1 : 0);
-                const f_moveZ = (this.keys.s ? 1 : 0) - (this.keys.w ? 1 : 0);
-                const f_moveY = (this.keys.q || this.keys.pageup ? 1 : 0) - (this.keys.e || this.keys.pagedown ? 1 : 0);
-
-                const moveForward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
-                const moveRight = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
-
-                this.camera.position.add(moveForward.multiplyScalar(-f_moveZ * 0.4));
-                this.camera.position.add(moveRight.multiplyScalar(f_moveX * 0.4));
-                this.camera.position.y += f_moveY * 0.4;
-                this.camera.rotation.set(this.rotation.x, this.rotation.y, 0, 'YXZ');
+                this.updateFreeMode();
                 break;
         }
+    }
+
+    updateIsometric(camSet) {
+        // Isometric: Fixed vertical angle (approx 35.26 deg) but allow horizontal orbit
+        const isoPhi = -0.615;
+        const dist = camSet.distance;
+
+        // Calculate position based on theta (user orbit) and fixed isoPhi
+        const x = this.currentFollowPos.x + dist * Math.sin(this.theta) * Math.cos(isoPhi);
+        const y = this.currentFollowPos.y + dist * Math.sin(-isoPhi);
+        const z = this.currentFollowPos.z + dist * Math.cos(this.theta) * Math.cos(isoPhi);
+
+        this.camera.position.set(x, y, z);
+        this.camera.lookAt(this.currentFollowPos.x, this.currentFollowPos.y + camSet.verticalOffset, this.currentFollowPos.z);
+    }
+
+    updateThirdPerson(camSet, pPos) {
+        const dist = camSet.distance;
+        // Third Person: True spherical orbit around the player
+        // We use this.phi for elevation
+        const x = pPos.x + dist * Math.sin(this.theta) * Math.cos(this.phi);
+        const y = pPos.y + camSet.verticalOffset + dist * Math.sin(this.phi);
+        const z = pPos.z + dist * Math.cos(this.theta) * Math.cos(this.phi);
+
+        this.camera.position.set(x, y, z);
+        this.camera.lookAt(pPos.x, pPos.y + camSet.verticalOffset, pPos.z);
+    }
+
+    updateFirstPerson(pPos) {
+        this.camera.position.copy(pPos);
+        this.camera.position.y += 1.6; // Eye level
+
+        // First Person: Rotation is direct from theta/phi
+        this.camera.rotation.order = 'YXZ';
+        this.camera.rotation.set(this.phi, this.theta, 0);
+
+        // Offset slightly forward to avoid clipping through the player mesh
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+        this.camera.position.add(forward.multiplyScalar(0.2));
+    }
+
+    updateFreeMode() {
+        const speed = 0.5;
+        const moveX = (this.keys.d ? 1 : 0) - (this.keys.a ? 1 : 0);
+        const moveZ = (this.keys.s ? 1 : 0) - (this.keys.w ? 1 : 0);
+        const moveY = (this.keys.q || this.keys.pageup ? 1 : 0) - (this.keys.e || this.keys.pagedown ? 1 : 0);
+
+        // Movement is relative to current rotation
+        const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(this.phi, this.theta, 0, 'YXZ'));
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
+        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+
+        this.camera.position.add(forward.multiplyScalar(-moveZ * speed));
+        this.camera.position.add(right.multiplyScalar(moveX * speed));
+        this.camera.position.y += moveY * speed;
+
+        this.camera.rotation.set(this.phi, this.theta, 0, 'YXZ');
+    }
+
+    getYRotation() {
+        return this.theta;
     }
 }

@@ -75,7 +75,13 @@ export class UIManager {
         this.elements.timeSpeed.addEventListener('input', (e) => Settings.time.timeSpeed = parseFloat(e.target.value));
 
         // Camera
-        this.elements.cameraMode.addEventListener('change', (e) => Settings.camera.mode = e.target.value);
+        this.elements.cameraMode.addEventListener('change', (e) => {
+            Settings.camera.mode = e.target.value;
+            // Logic to unlock pointer if mode changes from FP
+            if (e.target.value !== 'firstperson' && document.pointerLockElement) {
+                document.exitPointerLock();
+            }
+        });
         this.elements.cameraDistance.addEventListener('input', (e) => Settings.camera.distance = parseFloat(e.target.value));
         this.elements.cameraHeight.addEventListener('input', (e) => Settings.camera.height = parseFloat(e.target.value));
         this.elements.cameraVOffset.addEventListener('input', (e) => Settings.camera.verticalOffset = parseFloat(e.target.value));
@@ -175,6 +181,9 @@ export class UIManager {
                 this.showModal("Erro", "Falha ao ler o JSON. Verifique o pergaminho.", null, false);
             }
         });
+
+        // Initial UI Sync
+        this.syncUI();
     }
 
     showModal(title, message, onConfirm = null, showCancel = true) {
@@ -234,16 +243,26 @@ export class UIManager {
     }
 
     syncUI() {
-        // Simple sync for common elements
         this.elements.realTimeToggle.checked = Settings.time.useRealTime;
         this.elements.timeSlider.value = Settings.time.timeOfDay;
         this.elements.cameraMode.value = Settings.camera.mode;
+        this.elements.cameraDistance.value = Settings.camera.distance;
+        this.elements.cameraHeight.value = Settings.camera.height;
+        this.elements.cameraVOffset.value = Settings.camera.verticalOffset;
+        this.elements.terrainSize.value = Settings.terrain.size;
+        this.elements.terrainQuality.value = Settings.terrain.quality;
+        this.elements.terrainTriangulate.checked = Settings.terrain.triangulated;
+        this.elements.waterLevel.value = Settings.terrain.waterLevel;
+        this.elements.grassLevel.value = Settings.terrain.grassLevel;
+        this.elements.waterSpeed.value = Settings.water.speed;
+        this.elements.waterIntensity.value = Settings.water.intensity;
+        this.elements.waterOpacity.value = Settings.water.opacity;
     }
 
     update() {
-        // Correcting the resource keys based on Player.js inventory structure
-        if (this.elements.woodCount) this.elements.woodCount.innerText = this.game.player.inventory.tree || this.game.player.inventory.wood || 0;
-        if (this.elements.stoneCount) this.elements.stoneCount.innerText = this.game.player.inventory.rock || this.game.player.inventory.stone || 0;
+        const inventory = this.game.player.inventory;
+        if (this.elements.woodCount) this.elements.woodCount.innerText = inventory.wood || 0;
+        if (this.elements.stoneCount) this.elements.stoneCount.innerText = inventory.stone || 0;
 
         const h = Math.floor(Settings.time.timeOfDay);
         const m = Math.floor((Settings.time.timeOfDay % 1) * 60);
@@ -254,6 +273,7 @@ export class UIManager {
         else period = " (Meia-Noite)";
 
         this.elements.timeDisplay.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}${period}`;
+
         if (!this.game.engine.isInteractingWithUI) {
              this.elements.timeSlider.value = Settings.time.timeOfDay;
         }

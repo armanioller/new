@@ -14,12 +14,18 @@ export const Settings = {
         }
     },
     camera: {
-        mode: 'isometric', // isometric, thirdperson, firstperson, free
-        fov: 75,
-        distance: 12,
+        mode: 'isometric',
+        fov: {
+            isometric: 40,
+            thirdperson: 70,
+            firstperson: 80,
+            free: 75
+        },
+        distance: 15,
         height: 12,
         verticalOffset: 1.5,
-        rotation: { x: -Math.PI / 4, y: Math.PI / 4 }
+        // Standard ISO angles: 45deg horizontal (0.785 rad), ~35.264deg vertical (-0.615 rad)
+        rotation: { x: -0.615, y: 0.785 }
     },
     terrain: {
         size: 50,
@@ -29,8 +35,8 @@ export const Settings = {
         grassLevel: 2.0,
         colors: {
             sea: new THREE.Color(0x1a3d59),
-            dirt: new THREE.Color(0x5d4037), // Medieval Wood/Dirt
-            grass: new THREE.Color(0x3e4e20)  // Deep Medieval Green
+            dirt: new THREE.Color(0x5d4037),
+            grass: new THREE.Color(0x3e4e20)
         }
     },
     water: {

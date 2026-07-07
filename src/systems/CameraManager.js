@@ -4,19 +4,21 @@ import { Settings } from '../core/Settings.js';
 export class CameraManager {
     constructor(engine) {
         this.engine = engine;
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camera = new THREE.PerspectiveCamera(Settings.camera.fov.isometric, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.engine.camera = this.camera;
 
-        // Ensure values are initialized and not NaN
-        this.theta = Settings.camera.rotation?.y ?? Math.PI / 4;
-        this.phi = Settings.camera.rotation?.x ?? -Math.PI / 4;
+        // Use standard Spherical coordinates
+        this.spherical = new THREE.Spherical(
+            Settings.camera.distance,
+            Math.PI / 2 + Settings.camera.rotation.x, // phi (vertical offset from north pole)
+            Settings.camera.rotation.y                // theta (horizontal orbit)
+        );
 
         this.keys = {};
         window.addEventListener('keydown', (e) => this.keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', (e) => this.keys[e.key.toLowerCase()] = false);
 
         this.isRightMouseDown = false;
-
         const canvas = this.engine.renderer.domElement;
 
         canvas.addEventListener('mousedown', (e) => {
@@ -30,7 +32,8 @@ export class CameraManager {
         window.addEventListener('contextmenu', (e) => e.preventDefault());
         window.addEventListener('mousemove', (e) => this.onMouseMove(e));
 
-        this.currentFollowPos = new THREE.Vector3(0, 0, 0);
+        this.currentFollowPos = new THREE.Vector3(0, 5, 0);
+        this.targetFollowPos = new THREE.Vector3(0, 5, 0);
     }
 
     onMouseMove(e) {
@@ -40,11 +43,14 @@ export class CameraManager {
 
         if (canRotate) {
             const sensitivity = 0.003;
-            this.theta -= e.movementX * sensitivity;
-            this.phi -= e.movementY * sensitivity;
 
-            const limit = Math.PI / 2 - 0.05;
-            this.phi = Math.max(-limit, Math.min(limit, this.phi));
+            this.spherical.theta -= e.movementX * sensitivity;
+            this.spherical.phi -= e.movementY * sensitivity;
+
+            // Constraints
+            const phiMin = 0.1;
+            const phiMax = Math.PI - 0.1;
+            this.spherical.phi = THREE.MathUtils.clamp(this.spherical.phi, phiMin, phiMax);
         }
     }
 
@@ -52,23 +58,29 @@ export class CameraManager {
         const camSet = Settings.camera;
         const pPos = player ? player.position.clone() : new THREE.Vector3(0, 0, 0);
 
-        // Safety: check for NaN in player position
-        if (isNaN(pPos.x) || isNaN(pPos.y) || isNaN(pPos.z)) {
-            pPos.set(0, 0, 0);
+        // Safety check
+        if (isNaN(pPos.x)) pPos.set(0, 0, 0);
+
+        // Update FOV based on mode
+        const targetFov = camSet.fov[camSet.mode] || 75;
+        if (this.camera.fov !== targetFov) {
+            this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, 0.1);
+            this.camera.updateProjectionMatrix();
         }
 
-        const lerpFactor = 0.1;
-        this.currentFollowPos.lerp(pPos, lerpFactor);
+        // Smoothly follow player
+        this.targetFollowPos.copy(pPos);
+        this.currentFollowPos.lerp(this.targetFollowPos, 0.1);
 
         switch (camSet.mode) {
             case 'isometric':
                 this.updateIsometric(camSet);
                 break;
             case 'thirdperson':
-                this.updateThirdPerson(camSet, pPos);
+                this.updateThirdPerson(camSet);
                 break;
             case 'firstperson':
-                this.updateFirstPerson(pPos);
+                this.updateFirstPerson();
                 break;
             case 'free':
                 this.updateFreeMode();
@@ -77,40 +89,48 @@ export class CameraManager {
     }
 
     updateIsometric(camSet) {
-        const isoPhi = -0.615;
-        const dist = camSet.distance || 12;
+        // Fixed Vertical Angle for Isometric
+        // phi is 0 (up) to PI (down). ISO is ~35.26 from horizontal.
+        // Horizontal is PI/2. ISO is PI/2 + 0.615
+        const isoPhi = Math.PI / 2 + 0.615;
 
-        const x = this.currentFollowPos.x + dist * Math.sin(this.theta) * Math.cos(isoPhi);
-        const y = this.currentFollowPos.y + dist * Math.sin(-isoPhi);
-        const z = this.currentFollowPos.z + dist * Math.cos(this.theta) * Math.cos(isoPhi);
+        this.spherical.radius = camSet.distance;
 
-        if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-            this.camera.position.set(x, y, z);
-            this.camera.lookAt(this.currentFollowPos.x, this.currentFollowPos.y + (camSet.verticalOffset || 0), this.currentFollowPos.z);
-        }
+        const pos = new THREE.Vector3().setFromSphericalCoords(
+            this.spherical.radius,
+            isoPhi,
+            this.spherical.theta
+        );
+
+        this.camera.position.copy(this.currentFollowPos).add(pos);
+        this.camera.lookAt(this.currentFollowPos.x, this.currentFollowPos.y + camSet.verticalOffset, this.currentFollowPos.z);
     }
 
-    updateThirdPerson(camSet, pPos) {
-        const dist = camSet.distance || 12;
-        const x = pPos.x + dist * Math.sin(this.theta) * Math.cos(this.phi);
-        const y = pPos.y + (camSet.verticalOffset || 0) + dist * Math.sin(this.phi);
-        const z = pPos.z + dist * Math.cos(this.theta) * Math.cos(this.phi);
+    updateThirdPerson(camSet) {
+        this.spherical.radius = camSet.distance;
 
-        if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-            this.camera.position.set(x, y, z);
-            this.camera.lookAt(pPos.x, pPos.y + (camSet.verticalOffset || 0), pPos.z);
-        }
+        const pos = new THREE.Vector3().setFromSphericalCoords(
+            this.spherical.radius,
+            this.spherical.phi,
+            this.spherical.theta
+        );
+
+        this.camera.position.copy(this.currentFollowPos).add(pos);
+        this.camera.lookAt(this.currentFollowPos.x, this.currentFollowPos.y + camSet.verticalOffset, this.currentFollowPos.z);
     }
 
-    updateFirstPerson(pPos) {
-        this.camera.position.copy(pPos);
-        this.camera.position.y += 1.6;
+    updateFirstPerson() {
+        this.camera.position.copy(this.targetFollowPos);
+        this.camera.position.y += 1.7; // Standard Eye Level
 
         this.camera.rotation.order = 'YXZ';
-        this.camera.rotation.set(this.phi, this.theta, 0);
+        // In FP, rotation is theta and phi directly
+        // phi here is from top, so we subtract PI/2
+        this.camera.rotation.set(Math.PI / 2 - this.spherical.phi, this.spherical.theta, 0);
 
+        // Offset forward
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
-        this.camera.position.add(forward.multiplyScalar(0.2));
+        this.camera.position.add(forward.multiplyScalar(0.25));
     }
 
     updateFreeMode() {
@@ -119,7 +139,9 @@ export class CameraManager {
         const moveZ = (this.keys.s ? 1 : 0) - (this.keys.w ? 1 : 0);
         const moveY = (this.keys.q || this.keys.pageup ? 1 : 0) - (this.keys.e || this.keys.pagedown ? 1 : 0);
 
-        const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(this.phi, this.theta, 0, 'YXZ'));
+        const rot = new THREE.Euler(Math.PI / 2 - this.spherical.phi, this.spherical.theta, 0, 'YXZ');
+        const q = new THREE.Quaternion().setFromEuler(rot);
+
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
         const right = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
 
@@ -127,10 +149,11 @@ export class CameraManager {
         this.camera.position.add(right.multiplyScalar(moveX * speed));
         this.camera.position.y += moveY * speed;
 
-        this.camera.rotation.set(this.phi, this.theta, 0, 'YXZ');
+        this.camera.rotation.copy(rot);
     }
 
     getYRotation() {
-        return this.theta || 0;
+        // Return theta for WASD movement relative to camera
+        return this.spherical.theta;
     }
 }

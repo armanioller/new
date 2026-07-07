@@ -4,11 +4,10 @@ import { Settings } from '../core/Settings.js';
 export class CameraManager {
     constructor(engine) {
         this.engine = engine;
-        // Corrected Three.js import version should be handled via package.json or a valid CDN
         this.camera = new THREE.PerspectiveCamera(Settings.camera.fov.isometric, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.engine.camera = this.camera;
 
-        // Internal state for Yaw (horizontal) and Pitch (vertical)
+        // Internal state (Master Guide specification)
         this.yaw = Settings.camera.rotation.y;
         this.pitch = Settings.camera.rotation.x;
 
@@ -28,6 +27,9 @@ export class CameraManager {
 
         window.addEventListener('mouseup', (e) => { if (e.button === 2) this.isRightMouseDown = false; });
         window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Guard for first frame mouse movement to prevent infinite spin
+        this.mouseGuard = true;
         window.addEventListener('mousemove', (e) => this.onMouseMove(e));
 
         this.prevMode = null;
@@ -39,10 +41,16 @@ export class CameraManager {
         const canRotate = this.isRightMouseDown || isPointerLocked || mode === 'free';
 
         if (canRotate && mode !== 'isometric') {
+            // Sensitivity
             const sensitivity = 0.002;
+
+            // Standard mouse rotation directions
+            // movementX -> horizontal (yaw)
+            // movementY -> vertical (pitch)
             this.yaw -= e.movementX * sensitivity;
             this.pitch -= e.movementY * sensitivity;
 
+            // Limit pitch to -85 to 85 deg
             const limit = (Math.PI / 2) * 0.95;
             this.pitch = THREE.MathUtils.clamp(this.pitch, -limit, limit);
         }
@@ -87,10 +95,11 @@ export class CameraManager {
     }
 
     updateIsometric(pPos) {
-        const isoYaw = 0.785;
-        const isoPitch = -0.615;
+        const isoYaw = 0.785; // 45 deg
+        const isoPitch = -0.615; // ~35 deg incline
         const dist = Settings.camera.distance;
 
+        // RIGID POSITION (no lerp)
         const x = pPos.x + dist * Math.sin(isoYaw) * Math.cos(isoPitch);
         const y = pPos.y + dist * Math.sin(-isoPitch) + Settings.camera.verticalOffset;
         const z = pPos.z + dist * Math.cos(isoYaw) * Math.cos(isoPitch);
@@ -100,6 +109,7 @@ export class CameraManager {
     }
 
     updateThirdPerson(pPos, player, delta) {
+        // Smooth chase logic (Master Guide)
         if (player && !this.isRightMouseDown) {
             const playerRotY = player.physicalRotation;
             let targetYaw = playerRotY + Math.PI;
@@ -141,13 +151,11 @@ export class CameraManager {
         this.camera.rotation.order = 'YXZ';
         this.camera.rotation.set(this.pitch, this.yaw, 0);
 
-        // Handle rotation with arrows in Free mode as per Master Guide
         const rotSpeed = 2 * delta;
         if (this.keys.arrowleft) this.yaw += rotSpeed;
         if (this.keys.arrowright) this.yaw -= rotSpeed;
         if (this.keys.arrowup) this.pitch += rotSpeed;
         if (this.keys.arrowdown) this.pitch -= rotSpeed;
-        this.pitch = THREE.MathUtils.clamp(this.pitch, -1.5, 1.5);
 
         const q = new THREE.Quaternion().setFromEuler(this.camera.rotation);
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
@@ -158,7 +166,6 @@ export class CameraManager {
         this.camera.position.y += moveY * speed;
     }
 
-    // Required by Game.js
     getYRotation() {
         return this.yaw;
     }

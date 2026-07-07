@@ -68,12 +68,17 @@ export class Player {
         if (this.mixer) this.mixer.update(delta);
         if (Settings.camera.mode === 'free') return;
 
+        // 1. WASD Input relative to camera yaw
         const moveX = (this.keys.d ? 1 : 0) - (this.keys.a ? 1 : 0);
         const moveZ = (this.keys.s ? 1 : 0) - (this.keys.w ? 1 : 0);
         const isMoving = moveX !== 0 || moveZ !== 0;
 
         if (isMoving) {
+            // angle relative to player's keyboard input
             const inputAngle = Math.atan2(moveX, moveZ);
+
+            // final physical rotation = input angle + camera yaw
+            // (PI is added to ensure W moves away from camera)
             this.physicalRotation = inputAngle + cameraYaw + Math.PI;
 
             const speed = Settings.player.moveSpeed * delta;
@@ -83,6 +88,7 @@ export class Player {
             this.fadeToAction('walking');
         } else {
             this.fadeToAction('idle');
+            // Ensure orientation follows camera view in first person even when idle
             if (Settings.camera.mode === 'firstperson') {
                 this.physicalRotation = cameraYaw + Math.PI;
             }
@@ -104,6 +110,7 @@ export class Player {
             }
         }
 
+        // Shortest Angle Mesh Rotation
         let rotDiff = this.physicalRotation - this.group.rotation.y;
         rotDiff = Math.atan2(Math.sin(rotDiff), Math.cos(rotDiff));
         this.group.rotation.y += rotDiff * Math.min(1.0, 12 * delta);

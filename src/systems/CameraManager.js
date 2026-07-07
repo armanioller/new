@@ -7,11 +7,10 @@ export class CameraManager {
         this.camera = new THREE.PerspectiveCamera(Settings.camera.fov.isometric, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.engine.camera = this.camera;
 
-        // Use standard Spherical coordinates
         this.spherical = new THREE.Spherical(
             Settings.camera.distance,
-            Math.PI / 2 + Settings.camera.rotation.x, // phi (vertical offset from north pole)
-            Settings.camera.rotation.y                // theta (horizontal orbit)
+            Math.PI / 2 + Settings.camera.rotation.x,
+            Settings.camera.rotation.y
         );
 
         this.keys = {};
@@ -33,7 +32,9 @@ export class CameraManager {
         window.addEventListener('mousemove', (e) => this.onMouseMove(e));
 
         this.currentFollowPos = new THREE.Vector3(0, 5, 0);
-        this.targetFollowPos = new THREE.Vector3(0, 5, 0);
+
+        // State tracking
+        this.prevMode = null;
     }
 
     onMouseMove(e) {
@@ -43,14 +44,14 @@ export class CameraManager {
 
         if (canRotate) {
             const sensitivity = 0.003;
-
             this.spherical.theta -= e.movementX * sensitivity;
+
+            // In Third Person, we might want to allow free look if mouse is down,
+            // but the request is "always behind". We'll allow override and then snap back or let it follow.
             this.spherical.phi -= e.movementY * sensitivity;
 
-            // Constraints
-            const phiMin = 0.1;
-            const phiMax = Math.PI - 0.1;
-            this.spherical.phi = THREE.MathUtils.clamp(this.spherical.phi, phiMin, phiMax);
+            const limit = 0.1;
+            this.spherical.phi = THREE.MathUtils.clamp(this.spherical.phi, limit, Math.PI - limit);
         }
     }
 
@@ -58,28 +59,47 @@ export class CameraManager {
         const camSet = Settings.camera;
         const pPos = player ? player.position.clone() : new THREE.Vector3(0, 0, 0);
 
-        // Safety check
         if (isNaN(pPos.x)) pPos.set(0, 0, 0);
 
-        // Update FOV based on mode
+        // Mode Transition Logic
+        if (this.prevMode !== camSet.mode) {
+            this.onModeChange(camSet.mode, player);
+            this.prevMode = camSet.mode;
+        }
+
         const targetFov = camSet.fov[camSet.mode] || 75;
         if (this.camera.fov !== targetFov) {
             this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, 0.1);
             this.camera.updateProjectionMatrix();
         }
 
-        // Smoothly follow player
-        this.targetFollowPos.copy(pPos);
-        this.currentFollowPos.lerp(this.targetFollowPos, 0.1);
-
         switch (camSet.mode) {
             case 'isometric':
+                // RIGID FOLLOW: No lerp, camera is static relative to player
+                this.currentFollowPos.copy(pPos);
                 this.updateIsometric(camSet);
                 break;
             case 'thirdperson':
+                // Chase logic: theta follows player rotation smoothly
+                if (player) {
+                    const playerRotY = player.group.rotation.y;
+                    // Standard: theta should be playerRotY + PI (to be behind)
+                    let targetTheta = playerRotY + Math.PI;
+
+                    // Only auto-follow if not manually orbiting
+                    if (!this.isRightMouseDown) {
+                        let diff = targetTheta - this.spherical.theta;
+                        while (diff < -Math.PI) diff += Math.PI * 2;
+                        while (diff > Math.PI) diff -= Math.PI * 2;
+                        this.spherical.theta += diff * 0.05;
+                    }
+                }
+
+                this.currentFollowPos.lerp(pPos, 0.1);
                 this.updateThirdPerson(camSet);
                 break;
             case 'firstperson':
+                this.currentFollowPos.copy(pPos);
                 this.updateFirstPerson();
                 break;
             case 'free':
@@ -88,12 +108,24 @@ export class CameraManager {
         }
     }
 
-    updateIsometric(camSet) {
-        // Fixed Vertical Angle for Isometric
-        // phi is 0 (up) to PI (down). ISO is ~35.26 from horizontal.
-        // Horizontal is PI/2. ISO is PI/2 + 0.615
-        const isoPhi = Math.PI / 2 + 0.615;
+    onModeChange(newMode, player) {
+        if (!player) return;
 
+        // Handle model visibility
+        if (newMode === 'firstperson') {
+            player.group.visible = false;
+        } else {
+            player.group.visible = true;
+        }
+
+        // Reset rotation for certain modes if needed
+        if (newMode === 'isometric') {
+            this.spherical.theta = Settings.camera.rotation.y;
+        }
+    }
+
+    updateIsometric(camSet) {
+        const isoPhi = Math.PI / 2 + 0.615;
         this.spherical.radius = camSet.distance;
 
         const pos = new THREE.Vector3().setFromSphericalCoords(
@@ -120,15 +152,12 @@ export class CameraManager {
     }
 
     updateFirstPerson() {
-        this.camera.position.copy(this.targetFollowPos);
-        this.camera.position.y += 1.7; // Standard Eye Level
+        this.camera.position.copy(this.currentFollowPos);
+        this.camera.position.y += 1.7;
 
         this.camera.rotation.order = 'YXZ';
-        // In FP, rotation is theta and phi directly
-        // phi here is from top, so we subtract PI/2
         this.camera.rotation.set(Math.PI / 2 - this.spherical.phi, this.spherical.theta, 0);
 
-        // Offset forward
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
         this.camera.position.add(forward.multiplyScalar(0.25));
     }
@@ -153,7 +182,6 @@ export class CameraManager {
     }
 
     getYRotation() {
-        // Return theta for WASD movement relative to camera
         return this.spherical.theta;
     }
 }

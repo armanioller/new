@@ -24,8 +24,15 @@ export const Settings = {
         distance: 15,
         height: 12,
         verticalOffset: 1.5,
+        eyeHeight: 1.65,
         // Standard ISO angles: 45deg horizontal (0.785 rad), ~35.264deg vertical (-0.615 rad)
         rotation: { x: -0.615, y: 0.785 }
+    },
+    player: {
+        moveSpeed: 5,
+        rotateSpeed: 3,
+        acceleration: 12,
+        friction: 8
     },
     terrain: {
         size: 50,

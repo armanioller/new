@@ -77,14 +77,10 @@ export class UIManager {
         // Camera
         this.elements.cameraMode.addEventListener('change', (e) => {
             Settings.camera.mode = e.target.value;
-            // Logic to unlock pointer if mode changes from FP
             if (e.target.value !== 'firstperson' && document.pointerLockElement) {
                 document.exitPointerLock();
             }
         });
-        this.elements.cameraDistance.addEventListener('input', (e) => Settings.camera.distance = parseFloat(e.target.value));
-        this.elements.cameraHeight.addEventListener('input', (e) => Settings.camera.height = parseFloat(e.target.value));
-        this.elements.cameraVOffset.addEventListener('input', (e) => Settings.camera.verticalOffset = parseFloat(e.target.value));
 
         // Terrain
         this.elements.terrainSize.addEventListener('change', (e) => {
@@ -182,7 +178,6 @@ export class UIManager {
             }
         });
 
-        // Initial UI Sync
         this.syncUI();
     }
 
@@ -224,11 +219,21 @@ export class UIManager {
     }
 
     applyPreset(p) {
-        Object.assign(Settings.time, p.time);
-        Object.assign(Settings.camera, p.camera);
-        Object.assign(Settings.terrain, p.terrain);
-        Object.assign(Settings.water, p.water);
+        // Safe deep assign to avoid replacing THREE.Color instances with strings
+        Object.keys(p.time).forEach(k => {
+            if (k !== 'colors') Settings.time[k] = p.time[k];
+        });
+        Object.keys(p.camera).forEach(k => {
+            Settings.camera[k] = p.camera[k];
+        });
+        Object.keys(p.terrain).forEach(k => {
+            if (k !== 'colors') Settings.terrain[k] = p.terrain[k];
+        });
+        Object.keys(p.water).forEach(k => {
+            Settings.water[k] = p.water[k];
+        });
 
+        // Restore Colors using .set()
         Settings.time.colors.midnight.set('#' + p.time.colors.midnight);
         Settings.time.colors.dawn.set('#' + p.time.colors.dawn);
         Settings.time.colors.noon.set('#' + p.time.colors.noon);
@@ -246,9 +251,6 @@ export class UIManager {
         this.elements.realTimeToggle.checked = Settings.time.useRealTime;
         this.elements.timeSlider.value = Settings.time.timeOfDay;
         this.elements.cameraMode.value = Settings.camera.mode;
-        this.elements.cameraDistance.value = Settings.camera.distance;
-        this.elements.cameraHeight.value = Settings.camera.height;
-        this.elements.cameraVOffset.value = Settings.camera.verticalOffset;
         this.elements.terrainSize.value = Settings.terrain.size;
         this.elements.terrainQuality.value = Settings.terrain.quality;
         this.elements.terrainTriangulate.checked = Settings.terrain.triangulated;
@@ -257,6 +259,15 @@ export class UIManager {
         this.elements.waterSpeed.value = Settings.water.speed;
         this.elements.waterIntensity.value = Settings.water.intensity;
         this.elements.waterOpacity.value = Settings.water.opacity;
+
+        // Color pickers
+        this.elements.colorMidnight.value = '#' + Settings.time.colors.midnight.getHexString();
+        this.elements.colorDawn.value = '#' + Settings.time.colors.dawn.getHexString();
+        this.elements.colorNoon.value = '#' + Settings.time.colors.noon.getHexString();
+        this.elements.colorSunset.value = '#' + Settings.time.colors.sunset.getHexString();
+        this.elements.colorSea.value = '#' + Settings.terrain.colors.sea.getHexString();
+        this.elements.colorDirt.value = '#' + Settings.terrain.colors.dirt.getHexString();
+        this.elements.colorGrass.value = '#' + Settings.terrain.colors.grass.getHexString();
     }
 
     update() {

@@ -10,15 +10,20 @@ export class Player {
         this.group.position.set(0, 5, 0);
         this.scene.add(this.group);
 
+        this.physicalRotation = 0;
+        this.inventory = { wood: 0, stone: 0 };
+        this.keys = {};
+
         this.mixer = null;
         this.animations = {};
         this.currentAction = null;
-        this.velocity = new THREE.Vector3();
-        this.acceleration = 0.05;
-        this.friction = 0.85;
-        this.inventory = { wood: 0, stone: 0 };
 
-        this.keys = {};
+        // Jump Physics
+        this.isJumping = false;
+        this.jumpVelocity = 0;
+        this.jumpHeight = 0;
+        this.gravity = 30;
+
         window.addEventListener('keydown', (e) => this.keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', (e) => this.keys[e.key.toLowerCase()] = false);
 
@@ -33,7 +38,6 @@ export class Player {
         const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshStandardMaterial({ color: 0xc0c0c0 }));
         head.position.y = 1.6;
         this.placeholder.add(body, head);
-        this.placeholder.traverse(c => { if(c.isMesh) c.castShadow = true; });
         this.group.add(this.placeholder);
     }
 
@@ -60,7 +64,7 @@ export class Player {
         this.currentAction.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(duration).play();
     }
 
-    update(delta, cameraTheta) {
+    update(delta, cameraYaw) {
         if (this.mixer) this.mixer.update(delta);
         if (Settings.camera.mode === 'free') return;
 
@@ -69,42 +73,43 @@ export class Player {
         const isMoving = moveX !== 0 || moveZ !== 0;
 
         if (isMoving) {
-            // angle relative to input
             const inputAngle = Math.atan2(moveX, moveZ);
-            // player orientation relative to camera theta (standard is PI offset for 'w' moving away)
-            const targetAngle = inputAngle + cameraTheta + Math.PI;
+            this.physicalRotation = inputAngle + cameraYaw + Math.PI;
 
-            let diff = targetAngle - this.group.rotation.y;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            this.group.rotation.y += diff * 0.15;
-
-            this.velocity.x += Math.sin(targetAngle) * this.acceleration;
-            this.velocity.z += Math.cos(targetAngle) * this.acceleration;
-
-            if (Settings.camera.mode === 'firstperson') {
-                this.group.rotation.y = cameraTheta + Math.PI;
-            }
+            const speed = Settings.player.moveSpeed * delta;
+            this.group.position.x += Math.sin(this.physicalRotation) * speed;
+            this.group.position.z += Math.cos(this.physicalRotation) * speed;
 
             this.fadeToAction('walking');
         } else {
             this.fadeToAction('idle');
-        }
-
-        this.velocity.multiplyScalar(this.friction);
-
-        const isAction = this.currentAction && (this.currentAction.getClip().name.toLowerCase().includes('punch') || this.currentAction.getClip().name.toLowerCase().includes('jump'));
-
-        if (!isAction) {
-            if (!isNaN(this.velocity.x) && !isNaN(this.velocity.z)) {
-                this.group.position.add(this.velocity);
+            if (Settings.camera.mode === 'firstperson') {
+                this.physicalRotation = cameraYaw + Math.PI;
             }
         }
 
-        const h = this.terrain.getHeight(this.group.position.x, this.group.position.z);
-        if (!isNaN(h)) {
-            this.group.position.y = THREE.MathUtils.lerp(this.group.position.y, h, 0.2);
+        // Jump Handling
+        if (this.keys[' '] && !this.isJumping) {
+            this.isJumping = true;
+            this.jumpVelocity = 10;
+            this.fadeToAction('jump');
         }
+
+        if (this.isJumping) {
+            this.jumpHeight += this.jumpVelocity * delta;
+            this.jumpVelocity -= this.gravity * delta;
+            if (this.jumpHeight <= 0) {
+                this.jumpHeight = 0;
+                this.isJumping = false;
+            }
+        }
+
+        let rotDiff = this.physicalRotation - this.group.rotation.y;
+        rotDiff = Math.atan2(Math.sin(rotDiff), Math.cos(rotDiff));
+        this.group.rotation.y += rotDiff * Math.min(1.0, 12 * delta);
+
+        const h = this.terrain.getHeight(this.group.position.x, this.group.position.z);
+        this.group.position.y = THREE.MathUtils.lerp(this.group.position.y, h + this.jumpHeight, 10 * delta);
     }
 
     get position() { return this.group.position; }

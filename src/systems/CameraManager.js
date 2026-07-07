@@ -4,14 +4,13 @@ import { Settings } from '../core/Settings.js';
 export class CameraManager {
     constructor(engine) {
         this.engine = engine;
+        // Corrected Three.js import version should be handled via package.json or a valid CDN
         this.camera = new THREE.PerspectiveCamera(Settings.camera.fov.isometric, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.engine.camera = this.camera;
 
-        this.spherical = new THREE.Spherical(
-            Settings.camera.distance,
-            Math.PI / 2 + Settings.camera.rotation.x,
-            Settings.camera.rotation.y
-        );
+        // Internal state for Yaw (horizontal) and Pitch (vertical)
+        this.yaw = Settings.camera.rotation.y;
+        this.pitch = Settings.camera.rotation.x;
 
         this.keys = {};
         window.addEventListener('keydown', (e) => this.keys[e.key.toLowerCase()] = true);
@@ -31,9 +30,6 @@ export class CameraManager {
         window.addEventListener('contextmenu', (e) => e.preventDefault());
         window.addEventListener('mousemove', (e) => this.onMouseMove(e));
 
-        this.currentFollowPos = new THREE.Vector3(0, 5, 0);
-
-        // State tracking
         this.prevMode = null;
     }
 
@@ -42,146 +38,128 @@ export class CameraManager {
         const isPointerLocked = document.pointerLockElement === this.engine.renderer.domElement;
         const canRotate = this.isRightMouseDown || isPointerLocked || mode === 'free';
 
-        if (canRotate) {
-            const sensitivity = 0.003;
-            this.spherical.theta -= e.movementX * sensitivity;
+        if (canRotate && mode !== 'isometric') {
+            const sensitivity = 0.002;
+            this.yaw -= e.movementX * sensitivity;
+            this.pitch -= e.movementY * sensitivity;
 
-            // In Third Person, we might want to allow free look if mouse is down,
-            // but the request is "always behind". We'll allow override and then snap back or let it follow.
-            this.spherical.phi -= e.movementY * sensitivity;
-
-            const limit = 0.1;
-            this.spherical.phi = THREE.MathUtils.clamp(this.spherical.phi, limit, Math.PI - limit);
+            const limit = (Math.PI / 2) * 0.95;
+            this.pitch = THREE.MathUtils.clamp(this.pitch, -limit, limit);
         }
     }
 
     update(delta, player) {
         const camSet = Settings.camera;
-        const pPos = player ? player.position.clone() : new THREE.Vector3(0, 0, 0);
+        const pPos = player ? player.position.clone() : new THREE.Vector3(0, 5, 0);
 
-        if (isNaN(pPos.x)) pPos.set(0, 0, 0);
-
-        // Mode Transition Logic
         if (this.prevMode !== camSet.mode) {
             this.onModeChange(camSet.mode, player);
             this.prevMode = camSet.mode;
         }
 
         const targetFov = camSet.fov[camSet.mode] || 75;
-        if (this.camera.fov !== targetFov) {
-            this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, 0.1);
-            this.camera.updateProjectionMatrix();
-        }
+        this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, 10 * delta);
+        this.camera.updateProjectionMatrix();
 
         switch (camSet.mode) {
             case 'isometric':
-                // RIGID FOLLOW: No lerp, camera is static relative to player
-                this.currentFollowPos.copy(pPos);
-                this.updateIsometric(camSet);
+                this.updateIsometric(pPos);
                 break;
             case 'thirdperson':
-                // Chase logic: theta follows player rotation smoothly
-                if (player) {
-                    const playerRotY = player.group.rotation.y;
-                    // Standard: theta should be playerRotY + PI (to be behind)
-                    let targetTheta = playerRotY + Math.PI;
-
-                    // Only auto-follow if not manually orbiting
-                    if (!this.isRightMouseDown) {
-                        let diff = targetTheta - this.spherical.theta;
-                        while (diff < -Math.PI) diff += Math.PI * 2;
-                        while (diff > Math.PI) diff -= Math.PI * 2;
-                        this.spherical.theta += diff * 0.05;
-                    }
-                }
-
-                this.currentFollowPos.lerp(pPos, 0.1);
-                this.updateThirdPerson(camSet);
+                this.updateThirdPerson(pPos, player, delta);
                 break;
             case 'firstperson':
-                this.currentFollowPos.copy(pPos);
-                this.updateFirstPerson();
+                this.updateFirstPerson(pPos);
                 break;
             case 'free':
-                this.updateFreeMode();
+                this.updateFreeMode(delta);
                 break;
         }
     }
 
     onModeChange(newMode, player) {
-        if (!player) return;
+        if (player) player.group.visible = (newMode !== 'firstperson');
 
-        // Handle model visibility
-        if (newMode === 'firstperson') {
-            player.group.visible = false;
-        } else {
-            player.group.visible = true;
-        }
-
-        // Reset rotation for certain modes if needed
         if (newMode === 'isometric') {
-            this.spherical.theta = Settings.camera.rotation.y;
+            this.yaw = Settings.camera.rotation.y;
+            this.pitch = Settings.camera.rotation.x;
         }
     }
 
-    updateIsometric(camSet) {
-        const isoPhi = Math.PI / 2 + 0.615;
-        this.spherical.radius = camSet.distance;
+    updateIsometric(pPos) {
+        const isoYaw = 0.785;
+        const isoPitch = -0.615;
+        const dist = Settings.camera.distance;
 
-        const pos = new THREE.Vector3().setFromSphericalCoords(
-            this.spherical.radius,
-            isoPhi,
-            this.spherical.theta
-        );
+        const x = pPos.x + dist * Math.sin(isoYaw) * Math.cos(isoPitch);
+        const y = pPos.y + dist * Math.sin(-isoPitch) + Settings.camera.verticalOffset;
+        const z = pPos.z + dist * Math.cos(isoYaw) * Math.cos(isoPitch);
 
-        this.camera.position.copy(this.currentFollowPos).add(pos);
-        this.camera.lookAt(this.currentFollowPos.x, this.currentFollowPos.y + camSet.verticalOffset, this.currentFollowPos.z);
+        this.camera.position.set(x, y, z);
+        this.camera.lookAt(pPos.x, pPos.y + Settings.camera.verticalOffset, pPos.z);
     }
 
-    updateThirdPerson(camSet) {
-        this.spherical.radius = camSet.distance;
+    updateThirdPerson(pPos, player, delta) {
+        if (player && !this.isRightMouseDown) {
+            const playerRotY = player.physicalRotation;
+            let targetYaw = playerRotY + Math.PI;
 
-        const pos = new THREE.Vector3().setFromSphericalCoords(
-            this.spherical.radius,
-            this.spherical.phi,
-            this.spherical.theta
-        );
+            let yawDiff = targetYaw - this.yaw;
+            yawDiff = Math.atan2(Math.sin(yawDiff), Math.cos(yawDiff));
+            this.yaw += yawDiff * Math.min(1.0, 5.0 * delta);
+        }
 
-        this.camera.position.copy(this.currentFollowPos).add(pos);
-        this.camera.lookAt(this.currentFollowPos.x, this.currentFollowPos.y + camSet.verticalOffset, this.currentFollowPos.z);
+        const dist = Settings.camera.distance;
+        const x = pPos.x + dist * Math.sin(this.yaw) * Math.cos(this.pitch);
+        const y = pPos.y + dist * Math.sin(-this.pitch) + Settings.camera.verticalOffset;
+        const z = pPos.z + dist * Math.cos(this.yaw) * Math.cos(this.pitch);
+
+        this.camera.position.set(x, y, z);
+
+        const forward = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(0, player ? player.physicalRotation : 0, 0));
+        const lookTarget = pPos.clone().add(forward.multiplyScalar(2));
+        lookTarget.y += Settings.camera.verticalOffset;
+
+        this.camera.lookAt(lookTarget);
     }
 
-    updateFirstPerson() {
-        this.camera.position.copy(this.currentFollowPos);
-        this.camera.position.y += 1.7;
-
+    updateFirstPerson(pPos) {
+        this.camera.position.set(pPos.x, pPos.y + Settings.camera.eyeHeight, pPos.z);
         this.camera.rotation.order = 'YXZ';
-        this.camera.rotation.set(Math.PI / 2 - this.spherical.phi, this.spherical.theta, 0);
+        this.camera.rotation.set(this.pitch, this.yaw, 0);
 
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
-        this.camera.position.add(forward.multiplyScalar(0.25));
+        this.camera.position.add(forward.multiplyScalar(0.1));
     }
 
-    updateFreeMode() {
-        const speed = 0.5;
+    updateFreeMode(delta) {
+        const speed = 20 * delta;
         const moveX = (this.keys.d ? 1 : 0) - (this.keys.a ? 1 : 0);
         const moveZ = (this.keys.s ? 1 : 0) - (this.keys.w ? 1 : 0);
-        const moveY = (this.keys.q || this.keys.pageup ? 1 : 0) - (this.keys.e || this.keys.pagedown ? 1 : 0);
+        const moveY = (this.keys.pageup ? 1 : 0) - (this.keys.pagedown ? 1 : 0);
 
-        const rot = new THREE.Euler(Math.PI / 2 - this.spherical.phi, this.spherical.theta, 0, 'YXZ');
-        const q = new THREE.Quaternion().setFromEuler(rot);
+        this.camera.rotation.order = 'YXZ';
+        this.camera.rotation.set(this.pitch, this.yaw, 0);
 
+        // Handle rotation with arrows in Free mode as per Master Guide
+        const rotSpeed = 2 * delta;
+        if (this.keys.arrowleft) this.yaw += rotSpeed;
+        if (this.keys.arrowright) this.yaw -= rotSpeed;
+        if (this.keys.arrowup) this.pitch += rotSpeed;
+        if (this.keys.arrowdown) this.pitch -= rotSpeed;
+        this.pitch = THREE.MathUtils.clamp(this.pitch, -1.5, 1.5);
+
+        const q = new THREE.Quaternion().setFromEuler(this.camera.rotation);
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
         const right = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
 
         this.camera.position.add(forward.multiplyScalar(-moveZ * speed));
         this.camera.position.add(right.multiplyScalar(moveX * speed));
         this.camera.position.y += moveY * speed;
-
-        this.camera.rotation.copy(rot);
     }
 
+    // Required by Game.js
     getYRotation() {
-        return this.spherical.theta;
+        return this.yaw;
     }
 }

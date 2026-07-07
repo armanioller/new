@@ -61,7 +61,7 @@ export class Terrain {
         this.floor = new THREE.Mesh(floorGeometry, this.floorMaterial);
         this.floor.rotation.x = -Math.PI / 2;
         this.floor.receiveShadow = true;
-        this.floor.position.y = 0; // Ensure base at 0
+        this.floor.position.y = 0;
         this.scene.add(this.floor);
 
         const waterGeometry = new THREE.CircleGeometry(size * 4, 32);
@@ -106,8 +106,15 @@ export class Terrain {
     getHeight(x, z) {
         if (!this.floor) return 0;
         const { size, quality } = Settings.terrain;
-        const col = Math.round(((x / size) + 0.5) * quality);
-        const row = Math.round(((z / size) + 0.5) * quality);
+
+        const gridX = ((x / size) + 0.5) * quality;
+        const gridZ = ((z / size) + 0.5) * quality;
+
+        const col = Math.round(gridX);
+        const row = Math.round(gridZ);
+
+        if (col < 0 || col > quality || row < 0 || row > quality) return -5;
+
         const index = (row * (quality + 1) + col) * 3;
         return this.floor.geometry.attributes.position.array[index + 2] || 0;
     }

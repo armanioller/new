@@ -7,7 +7,6 @@ export class CameraManager {
         this.camera = new THREE.PerspectiveCamera(Settings.camera.fov.isometric, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.engine.camera = this.camera;
 
-        // Internal state (Master Guide specification)
         this.yaw = Settings.camera.rotation.y;
         this.pitch = Settings.camera.rotation.x;
 
@@ -22,41 +21,46 @@ export class CameraManager {
             if (e.button === 2) this.isRightMouseDown = true;
             if (e.button === 0 && Settings.camera.mode === 'firstperson') {
                 canvas.requestPointerLock();
+                this.ignoreMouseMoveFrames = 2; // FIX: Prevent spinning on lock
             }
         });
 
         window.addEventListener('mouseup', (e) => { if (e.button === 2) this.isRightMouseDown = false; });
         window.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // Guard for first frame mouse movement to prevent infinite spin
-        this.mouseGuard = true;
         window.addEventListener('mousemove', (e) => this.onMouseMove(e));
 
         this.prevMode = null;
+        this.ignoreMouseMoveFrames = 0;
+
+        // Stabilized height for Isometric
+        this.isoStableY = 0;
     }
 
     onMouseMove(e) {
+        if (this.ignoreMouseMoveFrames > 0) return;
+
         const mode = Settings.camera.mode;
         const isPointerLocked = document.pointerLockElement === this.engine.renderer.domElement;
         const canRotate = this.isRightMouseDown || isPointerLocked || mode === 'free';
 
         if (canRotate && mode !== 'isometric') {
-            // Sensitivity
             const sensitivity = 0.002;
 
-            // Standard mouse rotation directions
-            // movementX -> horizontal (yaw)
-            // movementY -> vertical (pitch)
+            // Standard FPS directions:
+            // movementX negative = rotate left (increase yaw)
+            // movementY negative = look up (decrease pitch)
             this.yaw -= e.movementX * sensitivity;
             this.pitch -= e.movementY * sensitivity;
 
-            // Limit pitch to -85 to 85 deg
             const limit = (Math.PI / 2) * 0.95;
             this.pitch = THREE.MathUtils.clamp(this.pitch, -limit, limit);
         }
     }
 
     update(delta, player) {
+        if (this.ignoreMouseMoveFrames > 0) this.ignoreMouseMoveFrames--;
+
         const camSet = Settings.camera;
         const pPos = player ? player.position.clone() : new THREE.Vector3(0, 5, 0);
 
@@ -71,7 +75,7 @@ export class CameraManager {
 
         switch (camSet.mode) {
             case 'isometric':
-                this.updateIsometric(pPos);
+                this.updateIsometric(pPos, delta);
                 break;
             case 'thirdperson':
                 this.updateThirdPerson(pPos, player, delta);
@@ -87,6 +91,7 @@ export class CameraManager {
 
     onModeChange(newMode, player) {
         if (player) player.group.visible = (newMode !== 'firstperson');
+        this.ignoreMouseMoveFrames = 2; // Prevent spin on mode change
 
         if (newMode === 'isometric') {
             this.yaw = Settings.camera.rotation.y;
@@ -94,22 +99,24 @@ export class CameraManager {
         }
     }
 
-    updateIsometric(pPos) {
-        const isoYaw = 0.785; // 45 deg
-        const isoPitch = -0.615; // ~35 deg incline
+    updateIsometric(pPos, delta) {
+        const isoYaw = 0.785;
+        const isoPitch = -0.615;
         const dist = Settings.camera.distance;
 
-        // RIGID POSITION (no lerp)
+        // FIX: Stabilize Y height to prevent "shaking" on uneven terrain
+        // We lerp the camera focus height slowly, but keep X/Z rigid
+        this.isoStableY = THREE.MathUtils.lerp(this.isoStableY, pPos.y, 5 * delta);
+
         const x = pPos.x + dist * Math.sin(isoYaw) * Math.cos(isoPitch);
-        const y = pPos.y + dist * Math.sin(-isoPitch) + Settings.camera.verticalOffset;
+        const y = this.isoStableY + dist * Math.sin(-isoPitch) + Settings.camera.verticalOffset;
         const z = pPos.z + dist * Math.cos(isoYaw) * Math.cos(isoPitch);
 
         this.camera.position.set(x, y, z);
-        this.camera.lookAt(pPos.x, pPos.y + Settings.camera.verticalOffset, pPos.z);
+        this.camera.lookAt(pPos.x, this.isoStableY + Settings.camera.verticalOffset, pPos.z);
     }
 
     updateThirdPerson(pPos, player, delta) {
-        // Smooth chase logic (Master Guide)
         if (player && !this.isRightMouseDown) {
             const playerRotY = player.physicalRotation;
             let targetYaw = playerRotY + Math.PI;
@@ -164,9 +171,5 @@ export class CameraManager {
         this.camera.position.add(forward.multiplyScalar(-moveZ * speed));
         this.camera.position.add(right.multiplyScalar(moveX * speed));
         this.camera.position.y += moveY * speed;
-    }
-
-    getYRotation() {
-        return this.yaw;
     }
 }

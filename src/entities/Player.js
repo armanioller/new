@@ -64,33 +64,45 @@ export class Player {
         this.currentAction.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(duration).play();
     }
 
-    update(delta, cameraYaw) {
+    update(delta, camera) {
         if (this.mixer) this.mixer.update(delta);
         if (Settings.camera.mode === 'free') return;
 
-        // 1. WASD Input relative to camera yaw
+        // 1. WASD Input relative to camera vectors (FIX: NO INVERSIONS)
         const moveX = (this.keys.d ? 1 : 0) - (this.keys.a ? 1 : 0);
         const moveZ = (this.keys.s ? 1 : 0) - (this.keys.w ? 1 : 0);
         const isMoving = moveX !== 0 || moveZ !== 0;
 
         if (isMoving) {
-            // angle relative to player's keyboard input
-            const inputAngle = Math.atan2(moveX, moveZ);
+            // Get camera direction projected on ground plane
+            const camForward = new THREE.Vector3();
+            camera.getWorldDirection(camForward);
+            camForward.y = 0;
+            camForward.normalize();
 
-            // final physical rotation = input angle + camera yaw
-            // (PI is added to ensure W moves away from camera)
-            this.physicalRotation = inputAngle + cameraYaw + Math.PI;
+            const camRight = new THREE.Vector3();
+            camRight.crossVectors(THREE.Object3D.DEFAULT_UP, camForward);
+
+            // Combine based on input
+            // moveZ is negative for W (meaning move FORWARD along camForward)
+            // moveX is positive for D (meaning move RIGHT along camRight)
+            const moveVec = new THREE.Vector3();
+            moveVec.addScaledVector(camForward, -moveZ);
+            moveVec.addScaledVector(camRight, -moveX);
+            moveVec.normalize();
+
+            this.physicalRotation = Math.atan2(moveVec.x, moveVec.z);
 
             const speed = Settings.player.moveSpeed * delta;
-            this.group.position.x += Math.sin(this.physicalRotation) * speed;
-            this.group.position.z += Math.cos(this.physicalRotation) * speed;
+            this.group.position.addScaledVector(moveVec, speed);
 
             this.fadeToAction('walking');
         } else {
             this.fadeToAction('idle');
-            // Ensure orientation follows camera view in first person even when idle
             if (Settings.camera.mode === 'firstperson') {
-                this.physicalRotation = cameraYaw + Math.PI;
+                const camForward = new THREE.Vector3();
+                camera.getWorldDirection(camForward);
+                this.physicalRotation = Math.atan2(camForward.x, camForward.z);
             }
         }
 

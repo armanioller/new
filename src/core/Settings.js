@@ -34,13 +34,13 @@ export const Settings = {
         friction: 8
     },
     terrain: {
-        size: 50,
-        quality: 40,
+        size: 80, // Increased default size
+        quality: 60,
         triangulated: true,
-        waterLevel: 1.5,
-        grassLevel: 2.0,
+        waterLevel: 0, // Lowered for better island look
+        grassLevel: 1.2,
         colors: {
-            sea: new THREE.Color(0x1a3d59),
+            sea: new THREE.Color(0x004466),
             dirt: new THREE.Color(0x5d4037),
             grass: new THREE.Color(0x3e4e20)
         }
@@ -48,13 +48,13 @@ export const Settings = {
     water: {
         speed: 0.4,
         intensity: 0.15,
-        opacity: 0.7
+        opacity: 0.8
     },
     resources: {
-        maxTrees: 40,
-        maxRocks: 20,
-        spawnRadius: 24,
-        minSpawnHeight: 1.8
+        maxTrees: 50,
+        maxRocks: 30,
+        spawnRadius: 35,
+        minSpawnHeight: 1.2
     },
     buildings: {
         items: [

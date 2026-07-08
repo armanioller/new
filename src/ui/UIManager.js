@@ -36,7 +36,6 @@ export class UIManager {
         };
 
         this.init();
-        this.initBuildUI();
     }
 
     init() {
@@ -98,42 +97,30 @@ export class UIManager {
 
         // Presets
         this.elements.btnSavePreset.addEventListener('click', () => {
-            this.showModal("Santuário", "Salvar progresso?", () => {
+            this.showModal("Santuário", "Deseja salvar suas configurações atuais?", () => {
                 localStorage.setItem('rpg_medieval_save', JSON.stringify(this.getPreset()));
             });
         });
 
         this.elements.btnLoadPreset.addEventListener('click', () => {
             const data = localStorage.getItem('rpg_medieval_save');
-            if (data) this.applyPreset(JSON.parse(data));
+            if (data) {
+                this.showModal("Restaurar", "Carregar progresso salvo?", () => {
+                    this.applyPreset(JSON.parse(data));
+                });
+            } else {
+                this.showModal("Erro", "Nenhum dado salvo encontrado.", null, false);
+            }
         });
 
         this.elements.btnResetDefaults.addEventListener('click', () => {
-            this.showModal("Reiniciar", "Tudo será perdido. Confirmar?", () => {
+            this.showModal("Reiniciar", "Todas as configurações e progresso serão perdidos. Confirmar?", () => {
                 localStorage.removeItem('rpg_medieval_save');
                 location.reload();
             });
         });
 
         this.syncUI();
-    }
-
-    initBuildUI() {
-        this.elements.buildList.innerHTML = '';
-        Settings.buildings.items.forEach(item => {
-            const btn = document.createElement('button');
-            btn.className = 'build-item-btn';
-            btn.innerHTML = `
-                <span class="icon">${item.icon}</span>
-                <span class="name">${item.name}</span>
-                <div class="cost">🪵${item.wood} 🪨${item.stone}</div>
-            `;
-            btn.onclick = () => {
-                this.game.buildings.toggleMode(item.id);
-                this.elements.settingsMenu.classList.remove('open');
-            };
-            this.elements.buildList.appendChild(btn);
-        });
     }
 
     showModal(title, message, onConfirm = null, showCancel = true) {
@@ -177,6 +164,8 @@ export class UIManager {
         this.elements.terrainSize.value = Settings.terrain.size;
         this.elements.terrainQuality.value = Settings.terrain.quality;
         this.elements.terrainTriangulate.checked = Settings.terrain.triangulated;
+
+        document.getElementById('manual-time-controls').style.display = Settings.time.useRealTime ? 'none' : 'block';
     }
 
     update() {

@@ -68,13 +68,11 @@ export class Player {
         if (this.mixer) this.mixer.update(delta);
         if (Settings.camera.mode === 'free') return;
 
-        // 1. WASD Input relative to camera vectors (FIX: NO INVERSIONS)
         const moveX = (this.keys.d ? 1 : 0) - (this.keys.a ? 1 : 0);
         const moveZ = (this.keys.s ? 1 : 0) - (this.keys.w ? 1 : 0);
         const isMoving = moveX !== 0 || moveZ !== 0;
 
         if (isMoving) {
-            // Get camera direction projected on ground plane
             const camForward = new THREE.Vector3();
             camera.getWorldDirection(camForward);
             camForward.y = 0;
@@ -83,9 +81,6 @@ export class Player {
             const camRight = new THREE.Vector3();
             camRight.crossVectors(THREE.Object3D.DEFAULT_UP, camForward);
 
-            // Combine based on input
-            // moveZ is negative for W (meaning move FORWARD along camForward)
-            // moveX is positive for D (meaning move RIGHT along camRight)
             const moveVec = new THREE.Vector3();
             moveVec.addScaledVector(camForward, -moveZ);
             moveVec.addScaledVector(camRight, -moveX);
@@ -122,10 +117,10 @@ export class Player {
             }
         }
 
-        // Shortest Angle Mesh Rotation
+        // FURTHER SLOWED MESH ROTATION: Factor reduced from 5 to 3.5 for heavy, smooth turns
         let rotDiff = this.physicalRotation - this.group.rotation.y;
         rotDiff = Math.atan2(Math.sin(rotDiff), Math.cos(rotDiff));
-        this.group.rotation.y += rotDiff * Math.min(1.0, 12 * delta);
+        this.group.rotation.y += rotDiff * Math.min(1.0, 3.5 * delta);
 
         const h = this.terrain.getHeight(this.group.position.x, this.group.position.z);
         this.group.position.y = THREE.MathUtils.lerp(this.group.position.y, h + this.jumpHeight, 10 * delta);

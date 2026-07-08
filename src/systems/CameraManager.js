@@ -21,7 +21,7 @@ export class CameraManager {
             if (e.button === 2) this.isRightMouseDown = true;
             if (e.button === 0 && Settings.camera.mode === 'firstperson') {
                 canvas.requestPointerLock();
-                this.ignoreMouseMoveFrames = 2; // FIX: Prevent spinning on lock
+                this.ignoreMouseMoveFrames = 2;
             }
         });
 
@@ -33,8 +33,8 @@ export class CameraManager {
         this.prevMode = null;
         this.ignoreMouseMoveFrames = 0;
 
-        // Stabilized height for Isometric
         this.isoStableY = 0;
+        this.thirdPersonTargetYaw = this.yaw;
     }
 
     onMouseMove(e) {
@@ -46,15 +46,13 @@ export class CameraManager {
 
         if (canRotate && mode !== 'isometric') {
             const sensitivity = 0.002;
-
-            // Standard FPS directions:
-            // movementX negative = rotate left (increase yaw)
-            // movementY negative = look up (decrease pitch)
             this.yaw -= e.movementX * sensitivity;
             this.pitch -= e.movementY * sensitivity;
 
             const limit = (Math.PI / 2) * 0.95;
             this.pitch = THREE.MathUtils.clamp(this.pitch, -limit, limit);
+
+            if (mode === 'thirdperson') this.thirdPersonTargetYaw = this.yaw;
         }
     }
 
@@ -91,11 +89,14 @@ export class CameraManager {
 
     onModeChange(newMode, player) {
         if (player) player.group.visible = (newMode !== 'firstperson');
-        this.ignoreMouseMoveFrames = 2; // Prevent spin on mode change
+        this.ignoreMouseMoveFrames = 5;
 
         if (newMode === 'isometric') {
             this.yaw = Settings.camera.rotation.y;
             this.pitch = Settings.camera.rotation.x;
+        }
+        if (newMode === 'thirdperson') {
+            this.thirdPersonTargetYaw = this.yaw;
         }
     }
 
@@ -104,8 +105,6 @@ export class CameraManager {
         const isoPitch = -0.615;
         const dist = Settings.camera.distance;
 
-        // FIX: Stabilize Y height to prevent "shaking" on uneven terrain
-        // We lerp the camera focus height slowly, but keep X/Z rigid
         this.isoStableY = THREE.MathUtils.lerp(this.isoStableY, pPos.y, 5 * delta);
 
         const x = pPos.x + dist * Math.sin(isoYaw) * Math.cos(isoPitch);
@@ -118,12 +117,15 @@ export class CameraManager {
 
     updateThirdPerson(pPos, player, delta) {
         if (player && !this.isRightMouseDown) {
-            const playerRotY = player.physicalRotation;
-            let targetYaw = playerRotY + Math.PI;
+            // FIX: Chase the VISUAL rotation (smooth) instead of PHYSICAL rotation (instant)
+            const visualRotY = player.group.rotation.y;
+            this.thirdPersonTargetYaw = visualRotY + Math.PI;
 
-            let yawDiff = targetYaw - this.yaw;
+            let yawDiff = this.thirdPersonTargetYaw - this.yaw;
             yawDiff = Math.atan2(Math.sin(yawDiff), Math.cos(yawDiff));
-            this.yaw += yawDiff * Math.min(1.0, 5.0 * delta);
+
+            // Smoother chase factor
+            this.yaw += yawDiff * Math.min(1.0, 3.0 * delta);
         }
 
         const dist = Settings.camera.distance;
@@ -133,8 +135,9 @@ export class CameraManager {
 
         this.camera.position.set(x, y, z);
 
-        const forward = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(0, player ? player.physicalRotation : 0, 0));
-        const lookTarget = pPos.clone().add(forward.multiplyScalar(2));
+        // FIX: Focus uses VISUAL rotation for smooth tracking
+        const forward = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(0, player ? player.group.rotation.y : 0, 0));
+        const lookTarget = pPos.clone().add(forward.multiplyScalar(1.5));
         lookTarget.y += Settings.camera.verticalOffset;
 
         this.camera.lookAt(lookTarget);
@@ -171,5 +174,9 @@ export class CameraManager {
         this.camera.position.add(forward.multiplyScalar(-moveZ * speed));
         this.camera.position.add(right.multiplyScalar(moveX * speed));
         this.camera.position.y += moveY * speed;
+    }
+
+    getYRotation() {
+        return this.yaw;
     }
 }

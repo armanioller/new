@@ -25,7 +25,6 @@ export const Settings = {
         height: 12,
         verticalOffset: 1.5,
         eyeHeight: 1.65,
-        // Standard ISO angles: 45deg horizontal (0.785 rad), ~35.264deg vertical (-0.615 rad)
         rotation: { x: -0.615, y: 0.785 }
     },
     player: {
@@ -56,5 +55,12 @@ export const Settings = {
         maxRocks: 20,
         spawnRadius: 24,
         minSpawnHeight: 1.8
+    },
+    buildings: {
+        items: [
+            { id: 'wall', name: 'Cerca de Madeira', wood: 2, stone: 0, icon: '🪵' },
+            { id: 'floor', name: 'Piso de Pedra', wood: 0, stone: 2, icon: '🪨' },
+            { id: 'fire', name: 'Fogueira', wood: 4, stone: 1, icon: '🔥' }
+        ]
     }
 };

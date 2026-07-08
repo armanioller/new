@@ -21,7 +21,6 @@
     <canvas id="game-canvas"></canvas>
 
     <div id="ui-layer">
-        <!-- Top Left: Stats & Inventory -->
         <div id="hud-top-left" class="hud-panel">
             <div class="hud-header">Mochila</div>
             <div class="resource-container">
@@ -36,12 +35,10 @@
             </div>
         </div>
 
-        <!-- Top Center: Global Time -->
         <div id="hud-top-center" class="hud-panel time-panel">
             <span id="time-display">12:00</span>
         </div>
 
-        <!-- Right Side: Settings Menu (Sidebar) -->
         <button id="settings-toggle" class="ui-icon-button">⚙️</button>
 
         <div id="settings-menu" class="sidebar">
@@ -52,11 +49,13 @@
             <div class="tabs">
                 <button class="tab-btn active" data-tab="tab-ambiente">Ambiente</button>
                 <button class="tab-btn" data-tab="tab-camera">Câmera</button>
+                <button class="tab-btn" data-tab="tab-construcao">Construção</button>
                 <button class="tab-btn" data-tab="tab-terreno">Terreno</button>
                 <button class="tab-btn" data-tab="tab-presets">Sistema</button>
             </div>
 
             <div class="sidebar-content">
+                <!-- Tab: Ambiente -->
                 <div id="tab-ambiente" class="tab-content active">
                     <div class="settings-group">
                         <h3>Controle do Tempo</h3>
@@ -85,30 +84,18 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="settings-group">
                         <h3>Cores do Céu</h3>
                         <div class="color-grid">
-                            <div class="color-item">
-                                <label>Noite</label>
-                                <input type="color" id="color-midnight" value="#020205">
-                            </div>
-                            <div class="color-item">
-                                <label>Alvorada</label>
-                                <input type="color" id="color-dawn" value="#ffa07a">
-                            </div>
-                            <div class="color-item">
-                                <label>Dia</label>
-                                <input type="color" id="color-noon" value="#87ceeb">
-                            </div>
-                            <div class="color-item">
-                                <label>Sunset</label>
-                                <input type="color" id="color-sunset" value="#ff4500">
-                            </div>
+                            <div class="color-item"><label>Noite</label><input type="color" id="color-midnight" value="#020205"></div>
+                            <div class="color-item"><label>Alvorada</label><input type="color" id="color-dawn" value="#ffa07a"></div>
+                            <div class="color-item"><label>Dia</label><input type="color" id="color-noon" value="#87ceeb"></div>
+                            <div class="color-item"><label>Sunset</label><input type="color" id="color-sunset" value="#ff4500"></div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Tab: Camera -->
                 <div id="tab-camera" class="tab-content">
                     <div class="settings-group">
                         <h3>Visão</h3>
@@ -121,85 +108,34 @@
                                 <option value="free">Construtor (Livre)</option>
                             </select>
                         </div>
-                        <div class="setting-row vertical">
-                            <label>Distância / Zoom (Bloqueado)</label>
-                            <input type="range" id="camera-distance" min="2" max="30" step="0.5" value="15" disabled>
-                        </div>
-                        <div class="setting-row vertical">
-                            <label>Altura (Isometric) (Bloqueado)</label>
-                            <input type="range" id="camera-height" min="2" max="30" step="0.5" value="12" disabled>
-                        </div>
-                        <div class="setting-row vertical">
-                            <label>Offset Vertical (Bloqueado)</label>
-                            <input type="range" id="camera-v-offset" min="0" max="5" step="0.1" value="1.5" disabled>
-                        </div>
                     </div>
-                    <p style="font-size: 0.8em; opacity: 0.7; padding: 10px;">* Configurações de precisão travadas para calibração.</p>
                 </div>
 
+                <!-- Tab: Construção -->
+                <div id="tab-construcao" class="tab-content">
+                    <div class="settings-group">
+                        <h3>Itens Disponíveis</h3>
+                        <div id="build-list" class="build-grid">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+                    <p style="font-size: 0.8em; opacity: 0.7; padding: 10px;">Aperte [B] para alternar o modo de construção.</p>
+                </div>
+
+                <!-- Tab: Terreno -->
                 <div id="tab-terreno" class="tab-content">
                     <div class="settings-group">
                         <h3>Geometria</h3>
-                        <div class="setting-row vertical">
-                            <label>Tamanho da Ilha</label>
-                            <input type="range" id="terrain-size" min="10" max="100" step="1" value="50">
-                        </div>
-                        <div class="setting-row vertical">
-                            <label>Subdivisões (Qualidade)</label>
-                            <input type="range" id="terrain-quality" min="10" max="100" step="1" value="40">
-                        </div>
+                        <div class="setting-row vertical"><label>Tamanho</label><input type="range" id="terrain-size" min="10" max="100" step="1" value="50"></div>
+                        <div class="setting-row vertical"><label>Subdivisões</label><input type="range" id="terrain-quality" min="10" max="100" step="1" value="40"></div>
                         <div class="setting-row">
-                            <label class="switch">
-                                <input type="checkbox" id="terrain-triangulate" checked>
-                                <span class="slider round"></span>
-                            </label>
+                            <label class="switch"><input type="checkbox" id="terrain-triangulate" checked><span class="slider round"></span></label>
                             <span>Estilo Low-Poly</span>
-                        </div>
-                    </div>
-
-                    <div class="settings-group">
-                        <h3>Água & Níveis</h3>
-                        <div class="setting-row vertical">
-                            <label>Nível da Água</label>
-                            <input type="range" id="water-level" min="0" max="5" step="0.1" value="1.5">
-                        </div>
-                        <div class="setting-row vertical">
-                            <label>Nível da Grama</label>
-                            <input type="range" id="grass-level" min="0" max="5" step="0.1" value="2.0">
-                        </div>
-                        <div class="setting-row vertical">
-                            <label>Velocidade Ondas</label>
-                            <input type="range" id="water-speed" min="0" max="2" step="0.1" value="0.4">
-                        </div>
-                        <div class="setting-row vertical">
-                            <label>Intensidade Ondas</label>
-                            <input type="range" id="water-intensity" min="0" max="1" step="0.05" value="0.15">
-                        </div>
-                        <div class="setting-row vertical">
-                            <label>Opacidade Água</label>
-                            <input type="range" id="water-opacity" min="0" max="1" step="0.05" value="0.7">
-                        </div>
-                    </div>
-
-                    <div class="settings-group">
-                        <h3>Cores Terreno</h3>
-                        <div class="color-grid">
-                            <div class="color-item">
-                                <label>Mar</label>
-                                <input type="color" id="color-sea" value="#1a3d59">
-                            </div>
-                            <div class="color-item">
-                                <label>Terra</label>
-                                <input type="color" id="color-dirt" value="#7b4a1b">
-                            </div>
-                            <div class="color-item">
-                                <label>Grama</label>
-                                <input type="color" id="color-grass" value="#2a4a30">
-                            </div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Tab: Sistema -->
                 <div id="tab-presets" class="tab-content">
                     <div class="settings-group">
                         <h3>Persistência</h3>
@@ -208,33 +144,19 @@
                             <button id="btn-load-preset" class="btn secondary">Carregar Local</button>
                         </div>
                     </div>
-                    <div class="settings-group">
-                        <h3>Compartilhar JSON</h3>
-                        <textarea id="import-json-area" placeholder="Cole JSON aqui..."></textarea>
-                        <div class="btn-grid">
-                            <button id="btn-export-json" class="btn success">Copiar JSON</button>
-                            <button id="btn-import-json" class="btn warning">Importar</button>
-                        </div>
-                    </div>
                     <button id="btn-reset-defaults" class="btn danger full">Resetar Jogo</button>
                 </div>
             </div>
         </div>
 
-        <!-- Help Tooltip -->
         <div id="help-hint">
-            [F] Colher | [Espaço] Pular | [Mouse Dir] Girar (Livre)
+            [F] Colher | [B] Construir | [Espaço] Pular
         </div>
 
-        <!-- Global Modal System -->
         <div id="global-modal" class="modal-overlay">
             <div class="modal-container">
-                <div class="modal-header">
-                    <h2 id="modal-title">Título do Modal</h2>
-                </div>
-                <div class="modal-body">
-                    <p id="modal-message">Conteúdo da mensagem aqui.</p>
-                </div>
+                <div class="modal-header"><h2 id="modal-title"></h2></div>
+                <div class="modal-body"><p id="modal-message"></p></div>
                 <div class="modal-footer">
                     <button id="modal-cancel" class="btn secondary">Cancelar</button>
                     <button id="modal-confirm" class="btn primary">Confirmar</button>

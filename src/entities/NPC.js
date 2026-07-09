@@ -50,9 +50,12 @@ export class NPC {
     }
 
     fadeToAction(name, duration = 0.5) {
-        if (!this.animations[name] || this.currentAction === this.animations[name]) return;
+        if (!this.animations[name]) return;
+        const nextAction = this.animations[name];
+        if (this.currentAction === nextAction && nextAction.isRunning()) return;
+
         if (this.currentAction) this.currentAction.fadeOut(duration);
-        this.currentAction = this.animations[name];
+        this.currentAction = nextAction;
         this.currentAction.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(duration).play();
     }
 

@@ -58,13 +58,42 @@ export class Player {
     }
 
     fadeToAction(name, duration = 0.2) {
-        if (!this.animations[name] || this.currentAction === this.animations[name]) return;
-        if (this.currentAction) this.currentAction.fadeOut(duration);
-        this.currentAction = this.animations[name];
-        this.currentAction.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(duration).play();
+        if (!this.animations[name]) return;
+        const nextAction = this.animations[name];
+
+        if (this.currentAction === nextAction && nextAction.isRunning()) return;
+
+        if (this.currentAction) {
+            this.currentAction.fadeOut(duration);
+        }
+
+        this.currentAction = nextAction;
+
+        const oneShots = ['punch', 'jump', 'thumbsup', 'no', 'wave', 'death'];
+        if (oneShots.includes(name)) {
+            this.currentAction.setLoop(THREE.LoopOnce);
+            this.currentAction.clampWhenFinished = true;
+        } else {
+            this.currentAction.setLoop(THREE.LoopRepeat);
+        }
+
+        this.currentAction
+            .reset()
+            .setEffectiveTimeScale(1)
+            .setEffectiveWeight(1)
+            .fadeIn(duration)
+            .play();
     }
 
     update(delta, camera) {
+        if (this.mixer) this.mixer.update(delta);
+        if (Settings.camera.mode === 'free') return;
+
+        // Determine if we are in a "lock" animation (like harvesting or jumping)
+        const currentAnimName = this.currentAction ? this.currentAction.getClip().name.toLowerCase() : '';
+        const isOneShot = ['punch', 'jump', 'thumbsup', 'no', 'wave'].includes(currentAnimName);
+        const isActionBusy = isOneShot && this.currentAction.isRunning() && this.currentAction.time < this.currentAction.getClip().duration * 0.8;
+
         if (this.mixer) this.mixer.update(delta);
         if (Settings.camera.mode === 'free') return;
 
@@ -72,6 +101,7 @@ export class Player {
         const moveZ = (this.keys.s ? 1 : 0) - (this.keys.w ? 1 : 0);
         const isMoving = moveX !== 0 || moveZ !== 0;
 
+        const isRunning = this.keys.shift;
         if (isMoving) {
             const camForward = new THREE.Vector3();
             camera.getWorldDirection(camForward);
@@ -88,12 +118,17 @@ export class Player {
 
             this.physicalRotation = Math.atan2(moveVec.x, moveVec.z);
 
-            const speed = Settings.player.moveSpeed * delta;
+            const baseSpeed = isRunning ? Settings.player.moveSpeed * 1.8 : Settings.player.moveSpeed;
+            const speed = baseSpeed * delta;
             this.group.position.addScaledVector(moveVec, speed);
 
-            this.fadeToAction('walking');
+            if (!isActionBusy) {
+                this.fadeToAction(isRunning ? 'running' : 'walking');
+            }
         } else {
-            this.fadeToAction('idle');
+            if (!isActionBusy) {
+                this.fadeToAction('idle');
+            }
             if (Settings.camera.mode === 'firstperson') {
                 const camForward = new THREE.Vector3();
                 camera.getWorldDirection(camForward);

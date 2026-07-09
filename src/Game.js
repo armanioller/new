@@ -17,9 +17,10 @@ class Game {
         this.resources = new ResourceManager(this.engine.scene, this.terrain);
         this.player = new Player(this.engine.scene, this.terrain);
 
-        // De-prioritizing for now as per user request to focus on environment/basics
+        // Re-enabling NPCs for animation test
         this.buildings = null;
         this.npcs = [];
+        this.spawnNPCs(5);
 
         this.ui = new UIManager(this);
 
@@ -52,6 +53,19 @@ class Game {
         }
     }
 
+
+    spawnNPCs(count) {
+        import('./entities/NPC.js').then(({ NPC }) => {
+            for (let i = 0; i < count; i++) {
+                const x = (Math.random() - 0.5) * 40;
+                const z = (Math.random() - 0.5) * 40;
+                const h = this.terrain.getHeight(x, z);
+                const npc = new NPC(this.engine.scene, this.terrain, new THREE.Vector3(x, h, z));
+                this.npcs.push(npc);
+            }
+        });
+    }
+
     animate() {
         requestAnimationFrame(() => this.animate());
 
@@ -63,6 +77,7 @@ class Game {
         this.terrain.updateWater(time);
 
         this.player.update(delta, this.cameraManager.camera);
+        this.npcs.forEach(npc => npc.update(delta));
 
         this.cameraManager.update(delta, this.player);
         this.ui.update();

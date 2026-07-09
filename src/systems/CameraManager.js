@@ -4,7 +4,7 @@ import { Settings } from '../core/Settings.js';
 export class CameraManager {
     constructor(engine) {
         this.engine = engine;
-        this.camera = new THREE.PerspectiveCamera(Settings.camera.fov.isometric, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camera = new THREE.PerspectiveCamera(Settings.camera.fov.isometric, window.innerWidth / window.innerHeight, 0.1, 5000);
         this.engine.camera = this.camera;
 
         this.yaw = Settings.camera.rotation.y;

@@ -13,14 +13,13 @@ export class Terrain {
             flatShading: Settings.terrain.triangulated
         });
 
-        // Water material with some specular highlights
         this.waterMaterial = new THREE.MeshStandardMaterial({
             color: 0x004466,
             transparent: true,
             opacity: Settings.water.opacity,
             flatShading: true,
-            roughness: 0.2,
-            metalness: 0.1
+            roughness: 0.1,
+            metalness: 0.2
         });
 
         this.init();
@@ -29,7 +28,6 @@ export class Terrain {
     init() {
         const { size, quality } = Settings.terrain;
 
-        // Cleanup
         if (this.floor) { this.scene.remove(this.floor); this.floor.geometry.dispose(); }
         if (this.water) { this.scene.remove(this.water); this.water.geometry.dispose(); }
         const oldSky = this.scene.getObjectByName("skydome");
@@ -42,20 +40,14 @@ export class Terrain {
         for (let i = 0; i < vertices.length; i += 3) {
             const x = vertices[i];
             const y = vertices[i + 1];
-
-            // Normalized distance from center (0 to 1)
             const dx = (x / (size / 2));
             const dy = (y / (size / 2));
             const dist = Math.sqrt(dx * dx + dy * dy);
 
-            // Edge falloff for island shape
             const edgeFactor = Math.max(0, 1 - Math.pow(dist, 3));
-
-            // Noise-like height
             let height = (Math.sin(x * 0.2) + Math.cos(y * 0.2)) * 2;
             height += (Math.sin(x * 0.5) * Math.cos(y * 0.5)) * 1.5;
 
-            // Final height with falloff
             vertices[i + 2] = height * edgeFactor - (1 - edgeFactor) * 5;
         }
 
@@ -68,17 +60,16 @@ export class Terrain {
         this.floor.position.y = 0;
         this.scene.add(this.floor);
 
-        // Infinite-like Water Plane
-        // We use a very large circle to simulate the horizon
-        const waterGeometry = new THREE.CircleGeometry(2000, 32);
-        this.water = new THREE.Mesh(waterGeometry, this.waterMaterial);
+        // EXPANDED: Water Plane for "Infinite" look
+        const waterGeometry = new THREE.CircleGeometry(4000, 32);
+        this.water = new THREE.Mesh(waterGeometry, this.waterMaterial); this.water.name = "water";
         this.water.rotation.x = -Math.PI / 2;
         this.water.position.y = Settings.terrain.waterLevel;
         this.water.receiveShadow = true;
         this.scene.add(this.water);
 
-        // Skydome for visual atmosphere
-        const skyGeo = new THREE.SphereGeometry(size * 10, 32, 15);
+        // EXPANDED: Skydome larger than water
+        const skyGeo = new THREE.SphereGeometry(4500, 32, 15);
         const skyMat = new THREE.MeshBasicMaterial({
             side: THREE.BackSide,
             transparent: true,
@@ -123,22 +114,15 @@ export class Terrain {
     getHeight(x, z) {
         if (!this.floor) return 0;
         const { size, quality } = Settings.terrain;
-
         const gridX = ((x / size) + 0.5) * quality;
         const gridZ = ((z / size) + 0.5) * quality;
-
         const col = Math.round(gridX);
         const row = Math.round(gridZ);
-
         if (col < 0 || col > quality || row < 0 || row > quality) return Settings.terrain.waterLevel - 1;
-
         const index = (row * (quality + 1) + col) * 3;
         const h = this.floor.geometry.attributes.position.array[index + 2];
         return (h !== undefined) ? h : Settings.terrain.waterLevel;
     }
 
-    updateWater(time) {
-        // Subtle water animation if needed, or keeping it flat for low-poly look
-        // For now, let's just keep it static and flat as per "Infinite" request
-    }
+    updateWater(time) {}
 }

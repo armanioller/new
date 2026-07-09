@@ -5,46 +5,41 @@ export class EnvironmentManager {
     constructor(scene) {
         this.scene = scene;
 
-        // Ambient Light for base visibility
         this.ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
         this.scene.add(this.ambientLight);
 
-        // Sun / Moon Light
         this.sunLight = new THREE.DirectionalLight(0xffffff, 1);
         this.sunLight.position.set(20, 50, 20);
         this.sunLight.castShadow = true;
 
-        // Optimize shadow map
         this.sunLight.shadow.mapSize.set(1024, 1024);
-        this.sunLight.shadow.camera.left = -60;
-        this.sunLight.shadow.camera.right = 60;
-        this.sunLight.shadow.camera.top = 60;
-        this.sunLight.shadow.camera.bottom = -60;
+        this.sunLight.shadow.camera.left = -100;
+        this.sunLight.shadow.camera.right = 100;
+        this.sunLight.shadow.camera.top = 100;
+        this.sunLight.shadow.camera.bottom = -100;
         this.sunLight.shadow.camera.near = 0.5;
-        this.sunLight.shadow.camera.far = 200;
+        this.sunLight.shadow.camera.far = 500;
         this.scene.add(this.sunLight);
 
-        // Fog is critical for the "Infinite Sea" horizon blend
-        // We use FogExp2 for a more natural density falloff
-        this.fog = new THREE.FogExp2(0x000000, 0.003);
+        // PERFECTED: Fog for "Infinite Sea" horizon blend
+        // Fog density adjusted for 4000 unit radius water
+        this.fog = new THREE.FogExp2(0x000000, 0.0006);
         this.scene.fog = this.fog;
     }
 
     update(timeOfDay) {
         const angle = ((timeOfDay - 6) / 24) * Math.PI * 2;
 
-        // Move sun in arc
         this.sunLight.position.set(
-            Math.cos(angle) * 80,
-            Math.sin(angle) * 80,
-            30
+            Math.cos(angle) * 150,
+            Math.sin(angle) * 150,
+            50
         );
 
         let skyColor;
         const t = timeOfDay;
         const c = Settings.time.colors;
 
-        // Interpolate colors based on time
         if (t >= 5 && t < 8) {
             skyColor = c.midnight.clone().lerp(c.dawn, (t - 5) / 3);
         } else if (t >= 8 && t < 17) {
@@ -67,12 +62,19 @@ export class EnvironmentManager {
             skydome.material.color.copy(skyColor);
         }
 
-        // Adjust light intensity based on day/night
+        // PERFECTED: Water color reacts to time of day for better horizon blending
+        const water = this.scene.getObjectByName("water");
+        if (water) {
+            const dayFactor = Math.max(0, Math.sin(angle));
+            const baseWaterColor = new THREE.Color(0x004466);
+            const nightWaterColor = new THREE.Color(0x000811);
+            water.material.color.copy(nightWaterColor).lerp(baseWaterColor, dayFactor);
+        }
+
         const dayFactor = Math.max(0, Math.sin(angle));
         this.sunLight.intensity = dayFactor * 1.2;
         this.ambientLight.intensity = 0.2 + (dayFactor * 0.3);
 
-        // Change sun color slightly during sunset/dawn
         if (t > 17 || t < 8) {
             this.sunLight.color.setHex(0xffaa88);
         } else {

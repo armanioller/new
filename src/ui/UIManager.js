@@ -14,6 +14,9 @@ export class UIManager {
             timeFreezeToggle: document.getElementById('time-freeze-toggle'),
             timeSpeed: document.getElementById('time-speed'),
             cameraMode: document.getElementById('camera-mode'),
+            cameraDistance: document.getElementById('camera-distance'),
+            cameraHeight: document.getElementById('camera-height'),
+            cameraOffset: document.getElementById('camera-offset'),
             terrainSize: document.getElementById('terrain-size'),
             terrainQuality: document.getElementById('terrain-quality'),
             terrainTriangulate: document.getElementById('terrain-triangulate'),
@@ -70,6 +73,9 @@ export class UIManager {
                 document.exitPointerLock();
             }
         });
+        this.elements.cameraDistance.addEventListener('input', (e) => Settings.camera.distance = parseFloat(e.target.value));
+        this.elements.cameraHeight.addEventListener('input', (e) => Settings.camera.height = parseFloat(e.target.value));
+        this.elements.cameraOffset.addEventListener('input', (e) => Settings.camera.verticalOffset = parseFloat(e.target.value));
 
         // Terrain
         this.elements.terrainSize.addEventListener('change', (e) => {
@@ -161,6 +167,9 @@ export class UIManager {
         this.elements.realTimeToggle.checked = Settings.time.useRealTime;
         this.elements.timeSlider.value = Settings.time.timeOfDay;
         this.elements.cameraMode.value = Settings.camera.mode;
+        this.elements.cameraDistance.value = Settings.camera.distance;
+        this.elements.cameraHeight.value = Settings.camera.height;
+        this.elements.cameraOffset.value = Settings.camera.verticalOffset;
         this.elements.terrainSize.value = Settings.terrain.size;
         this.elements.terrainQuality.value = Settings.terrain.quality;
         this.elements.terrainTriangulate.checked = Settings.terrain.triangulated;

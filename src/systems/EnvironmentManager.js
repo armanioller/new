@@ -21,9 +21,9 @@ export class EnvironmentManager {
         this.sunLight.shadow.camera.far = 500;
         this.scene.add(this.sunLight);
 
-        // PERFECTED: Fog for "Infinite Sea" horizon blend
-        // Fog density adjusted for 4000 unit radius water
-        this.fog = new THREE.FogExp2(0x000000, 0.0006);
+        // INFINITE HORIZON: 0.002 density means visibility is 0.03% at 4000 units
+        // Our water is now 8000 units, so it's impossible to see the edge.
+        this.fog = new THREE.FogExp2(0x000000, 0.002);
         this.scene.fog = this.fog;
     }
 
@@ -62,7 +62,6 @@ export class EnvironmentManager {
             skydome.material.color.copy(skyColor);
         }
 
-        // PERFECTED: Water color reacts to time of day for better horizon blending
         const water = this.scene.getObjectByName("water");
         if (water) {
             const dayFactor = Math.max(0, Math.sin(angle));

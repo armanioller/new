@@ -15,7 +15,7 @@ export class Terrain {
 
         this.waterMaterial = new THREE.MeshStandardMaterial({
             color: 0x004466,
-            transparent: true,
+            transparent: false,
             opacity: Settings.water.opacity,
             flatShading: true,
             roughness: 0.1,
@@ -61,7 +61,7 @@ export class Terrain {
         this.scene.add(this.floor);
 
         // EXPANDED: Water Plane for "Infinite" look
-        const waterGeometry = new THREE.CircleGeometry(4000, 32);
+        const waterGeometry = new THREE.CircleGeometry(8000, 64);
         this.water = new THREE.Mesh(waterGeometry, this.waterMaterial); this.water.name = "water";
         this.water.rotation.x = -Math.PI / 2;
         this.water.position.y = Settings.terrain.waterLevel;
@@ -69,10 +69,10 @@ export class Terrain {
         this.scene.add(this.water);
 
         // EXPANDED: Skydome larger than water
-        const skyGeo = new THREE.SphereGeometry(4500, 32, 15);
+        const skyGeo = new THREE.SphereGeometry(8500, 32, 15);
         const skyMat = new THREE.MeshBasicMaterial({
             side: THREE.BackSide,
-            transparent: true,
+            transparent: false,
             opacity: 1
         });
         this.skydome = new THREE.Mesh(skyGeo, skyMat);

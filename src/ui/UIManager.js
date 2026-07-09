@@ -24,6 +24,9 @@ export class UIManager {
             colorDawn: document.getElementById('color-dawn'),
             colorNoon: document.getElementById('color-noon'),
             colorSunset: document.getElementById('color-sunset'),
+            colorSea: document.getElementById('color-sea'),
+            colorDirt: document.getElementById('color-dirt'),
+            colorGrass: document.getElementById('color-grass'),
             btnSavePreset: document.getElementById('btn-save-preset'),
             btnLoadPreset: document.getElementById('btn-load-preset'),
             btnResetDefaults: document.getElementById('btn-reset-defaults'),
@@ -100,6 +103,9 @@ export class UIManager {
         this.elements.colorDawn.addEventListener('input', (e) => updateColor('time', 'dawn', e));
         this.elements.colorNoon.addEventListener('input', (e) => updateColor('time', 'noon', e));
         this.elements.colorSunset.addEventListener('input', (e) => updateColor('time', 'sunset', e));
+        this.elements.colorSea.addEventListener('input', (e) => updateColor('terrain', 'sea', e));
+        this.elements.colorDirt.addEventListener('input', (e) => updateColor('terrain', 'dirt', e));
+        this.elements.colorGrass.addEventListener('input', (e) => updateColor('terrain', 'grass', e));
 
         // Presets
         this.elements.btnSavePreset.addEventListener('click', () => {
@@ -175,6 +181,9 @@ export class UIManager {
         this.elements.terrainTriangulate.checked = Settings.terrain.triangulated;
 
         document.getElementById('manual-time-controls').style.display = Settings.time.useRealTime ? 'none' : 'block';
+        this.elements.colorSea.value = '#' + Settings.terrain.colors.sea.getHexString();
+        this.elements.colorDirt.value = '#' + Settings.terrain.colors.dirt.getHexString();
+        this.elements.colorGrass.value = '#' + Settings.terrain.colors.grass.getHexString();
     }
 
     update() {

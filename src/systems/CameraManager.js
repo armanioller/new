@@ -108,7 +108,7 @@ export class CameraManager {
         this.isoStableY = THREE.MathUtils.lerp(this.isoStableY, pPos.y, 5 * delta);
 
         const x = pPos.x + dist * Math.sin(isoYaw) * Math.cos(isoPitch);
-        const y = this.isoStableY + dist * Math.sin(-isoPitch) + Settings.camera.verticalOffset;
+        const y = this.isoStableY + Settings.camera.height + Settings.camera.verticalOffset;
         const z = pPos.z + dist * Math.cos(isoYaw) * Math.cos(isoPitch);
 
         this.camera.position.set(x, y, z);
@@ -130,7 +130,7 @@ export class CameraManager {
 
         const dist = Settings.camera.distance;
         const x = pPos.x + dist * Math.sin(this.yaw) * Math.cos(this.pitch);
-        const y = pPos.y + dist * Math.sin(-this.pitch) + Settings.camera.verticalOffset;
+        const y = pPos.y + Settings.camera.height + Settings.camera.verticalOffset;
         const z = pPos.z + dist * Math.cos(this.yaw) * Math.cos(this.pitch);
 
         this.camera.position.set(x, y, z);

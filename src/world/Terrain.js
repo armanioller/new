@@ -109,6 +109,7 @@ export class Terrain {
         this.floorMaterial.flatShading = Settings.terrain.triangulated;
         this.floorMaterial.needsUpdate = true;
         this.waterMaterial.opacity = Settings.water.opacity;
+        this.waterMaterial.color.copy(Settings.terrain.colors.sea);
     }
 
     getHeight(x, z) {

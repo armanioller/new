@@ -20,6 +20,8 @@ export class UIManager {
             terrainSize: document.getElementById('terrain-size'),
             terrainQuality: document.getElementById('terrain-quality'),
             terrainTriangulate: document.getElementById('terrain-triangulate'),
+            terrainDepth: document.getElementById('terrain-depth'),
+            waterOpacity: document.getElementById('water-opacity'),
             colorMidnight: document.getElementById('color-midnight'),
             colorDawn: document.getElementById('color-dawn'),
             colorNoon: document.getElementById('color-noon'),
@@ -91,6 +93,14 @@ export class UIManager {
         });
         this.elements.terrainTriangulate.addEventListener('change', (e) => {
             Settings.terrain.triangulated = e.target.checked;
+            this.game.terrain.updateVisuals();
+        });
+        this.elements.terrainDepth.addEventListener('input', (e) => {
+            Settings.terrain.seaDepth = parseFloat(e.target.value);
+            this.game.terrain.init(); // Need re-init for geometry change
+        });
+        this.elements.waterOpacity.addEventListener('input', (e) => {
+            Settings.water.opacity = parseFloat(e.target.value);
             this.game.terrain.updateVisuals();
         });
 
@@ -179,6 +189,8 @@ export class UIManager {
         this.elements.terrainSize.value = Settings.terrain.size;
         this.elements.terrainQuality.value = Settings.terrain.quality;
         this.elements.terrainTriangulate.checked = Settings.terrain.triangulated;
+        this.elements.terrainDepth.value = Settings.terrain.seaDepth;
+        this.elements.waterOpacity.value = Settings.water.opacity;
 
         document.getElementById('manual-time-controls').style.display = Settings.time.useRealTime ? 'none' : 'block';
         this.elements.colorSea.value = '#' + Settings.terrain.colors.sea.getHexString();

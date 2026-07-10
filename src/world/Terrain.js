@@ -13,13 +13,12 @@ export class Terrain {
             flatShading: Settings.terrain.triangulated
         });
 
-        // Opaque, matte water to eliminate all "divisions" and "white stains" (specular highlights)
         this.waterMaterial = new THREE.MeshStandardMaterial({
             color: 0x004466,
-            transparent: false, // Make it opaque to completely hide what's underneath
-            opacity: 1.0,
-            roughness: 1.0, // Maximum roughness removes "white stains" (specular highlights)
-            metalness: 0.0,
+            transparent: true,
+            opacity: Settings.water.opacity,
+            roughness: 0.1,
+            metalness: 0.1,
             flatShading: false
         });
 
@@ -27,7 +26,7 @@ export class Terrain {
     }
 
     init() {
-        const { size, quality } = Settings.terrain;
+        const { size, quality, seaDepth } = Settings.terrain;
 
         if (this.floor) { this.scene.remove(this.floor); this.floor.geometry.dispose(); }
         if (this.water) { this.scene.remove(this.water); this.water.geometry.dispose(); }
@@ -50,8 +49,8 @@ export class Terrain {
             let height = (Math.sin(x * 0.15) + Math.cos(y * 0.15)) * 2.5;
             height += (Math.sin(x * 0.4) * Math.cos(y * 0.4)) * 1.5;
 
-            const deepBottom = -60;
-            vertices[i + 2] = (height * edgeFactor) + (1 - edgeFactor) * deepBottom;
+            // Dynamic depth based on settings
+            vertices[i + 2] = (height * edgeFactor) + (1 - edgeFactor) * seaDepth;
         }
 
         floorGeometry.computeVertexNormals();
@@ -93,13 +92,17 @@ export class Terrain {
 
         const dirtColor = Settings.terrain.colors.dirt;
         const grassColor = Settings.terrain.colors.grass;
+        const seaColor = Settings.terrain.colors.sea;
+        const depthColor = new THREE.Color(0x000204);
 
         for (let i = 0; i < vertices.length; i += 3) {
             const height = vertices[i + 2];
             let color;
 
             if (height < Settings.terrain.waterLevel + 0.3) {
-                color = dirtColor; // Keep it simple
+                const depth = Math.max(0, Settings.terrain.waterLevel - height);
+                const depthFactor = Math.min(1, depth / 10);
+                color = dirtColor.clone().lerp(depthColor, depthFactor);
             } else if (height < Settings.terrain.grassLevel) {
                 color = dirtColor;
             } else {
@@ -114,7 +117,9 @@ export class Terrain {
 
         if (this.water) {
             this.water.position.y = Settings.terrain.waterLevel;
-            this.water.material.color.copy(Settings.terrain.colors.sea);
+            this.water.material.opacity = Settings.water.opacity;
+            this.water.material.color.copy(seaColor);
+            this.water.material.needsUpdate = true;
         }
 
         this.floorMaterial.flatShading = Settings.terrain.triangulated;
@@ -128,10 +133,10 @@ export class Terrain {
             new THREE.Vector3(0, -1, 0)
         );
         const intersects = raycaster.intersectObject(this.floor);
-        return (intersects.length > 0) ? intersects[0].point.y : -60;
+        return (intersects.length > 0) ? intersects[0].point.y : Settings.terrain.seaDepth;
     }
 
     updateWater(time) {
-        // No waves
+        // No waves as requested
     }
 }

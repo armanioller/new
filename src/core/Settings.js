@@ -34,11 +34,12 @@ export const Settings = {
         friction: 8
     },
     terrain: {
-        size: 80, // Increased default size
+        size: 80,
         quality: 60,
         triangulated: true,
-        waterLevel: 0, // Lowered for better island look
+        waterLevel: 0,
         grassLevel: 1.2,
+        seaDepth: -10, // New setting
         colors: {
             sea: new THREE.Color(0x004466),
             dirt: new THREE.Color(0x5d4037),
@@ -48,7 +49,7 @@ export const Settings = {
     water: {
         speed: 0.4,
         intensity: 0,
-        opacity: 0.9
+        opacity: 0.6 // Default transparency
     },
     resources: {
         maxTrees: 50,

@@ -5,7 +5,7 @@ test('Verify Infinite Sea Geometry and Fog', async ({ page }) => {
     await page.waitForTimeout(2000);
 
     const data = await page.evaluate(() => {
-        const water = window.game.engine.scene.getObjectByName("water-outer");
+        const water = window.game.engine.scene.getObjectByName("water");
         const fog = window.game.engine.scene.fog;
         const camera = window.game.engine.camera;
 

@@ -47,8 +47,8 @@ export const Settings = {
     },
     water: {
         speed: 0.4,
-        intensity: 0.15,
-        opacity: 0.8
+        intensity: 0,
+        opacity: 0.9
     },
     resources: {
         maxTrees: 50,

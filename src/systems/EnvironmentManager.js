@@ -21,7 +21,7 @@ export class EnvironmentManager {
         this.sunLight.shadow.camera.far = 2500;
         this.scene.add(this.sunLight);
 
-        // THICKER FOG for seamless horizon
+        // THICK FOG for seamless horizon
         this.fog = new THREE.FogExp2(0x87ceeb, 0.0006);
         this.scene.fog = this.fog;
     }
@@ -62,16 +62,15 @@ export class EnvironmentManager {
             skydome.material.color.copy(skyColor);
         }
 
-        // Apply colors to BOTH water meshes via their shared material
-        const water = this.scene.getObjectByName("water-inner");
+        const water = this.scene.getObjectByName("water");
         if (water && water.material) {
             const dayFactor = Math.max(0, Math.sin(angle));
             const baseWaterColor = Settings.terrain.colors.sea;
             const nightWaterColor = new THREE.Color(0x00050a);
 
             water.material.color.copy(nightWaterColor).lerp(baseWaterColor, dayFactor);
-            // Ambient reflection of sky
-            water.material.emissive.copy(skyColor).multiplyScalar(0.08);
+            // Ambient reflection of sky - very subtle
+            water.material.emissive.copy(skyColor).multiplyScalar(0.04);
         }
 
         const dayFactor = Math.max(0, Math.sin(angle));

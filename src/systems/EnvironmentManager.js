@@ -8,48 +8,48 @@ export class EnvironmentManager {
         this.ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
         this.scene.add(this.ambientLight);
 
-        this.sunLight = new THREE.DirectionalLight(0xffffff, 1);
-        this.sunLight.position.set(20, 50, 20);
+        this.sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        this.sunLight.position.set(50, 100, 50);
         this.sunLight.castShadow = true;
 
-        this.sunLight.shadow.mapSize.set(1024, 1024);
-        this.sunLight.shadow.camera.left = -100;
-        this.sunLight.shadow.camera.right = 100;
-        this.sunLight.shadow.camera.top = 100;
-        this.sunLight.shadow.camera.bottom = -100;
+        this.sunLight.shadow.mapSize.set(2048, 2048);
+        this.sunLight.shadow.camera.left = -150;
+        this.sunLight.shadow.camera.right = 150;
+        this.sunLight.shadow.camera.top = 150;
+        this.sunLight.shadow.camera.bottom = -150;
         this.sunLight.shadow.camera.near = 0.5;
-        this.sunLight.shadow.camera.far = 500;
+        this.sunLight.shadow.camera.far = 2500;
         this.scene.add(this.sunLight);
 
-        // INFINITE HORIZON: 0.002 density means visibility is 0.03% at 4000 units
-        // Our water is now 8000 units, so it's impossible to see the edge.
-        this.fog = new THREE.FogExp2(0x000000, 0.002);
+        // THICKER FOG for seamless horizon
+        this.fog = new THREE.FogExp2(0x87ceeb, 0.0006);
         this.scene.fog = this.fog;
     }
 
     update(timeOfDay) {
         const angle = ((timeOfDay - 6) / 24) * Math.PI * 2;
 
+        const sunDist = 1800;
         this.sunLight.position.set(
-            Math.cos(angle) * 150,
-            Math.sin(angle) * 150,
-            50
+            Math.cos(angle) * sunDist,
+            Math.sin(angle) * sunDist,
+            sunDist * 0.3
         );
 
-        let skyColor;
         const t = timeOfDay;
         const c = Settings.time.colors;
+        let skyColor = new THREE.Color();
 
         if (t >= 5 && t < 8) {
-            skyColor = c.midnight.clone().lerp(c.dawn, (t - 5) / 3);
+            skyColor.copy(c.midnight).lerp(c.dawn, (t - 5) / 3);
         } else if (t >= 8 && t < 17) {
-            skyColor = c.dawn.clone().lerp(c.noon, (t - 8) / 9);
+            skyColor.copy(c.dawn).lerp(c.noon, (t - 8) / 9);
         } else if (t >= 17 && t < 20) {
-            skyColor = c.noon.clone().lerp(c.sunset, (t - 17) / 3);
+            skyColor.copy(c.noon).lerp(c.sunset, (t - 17) / 3);
         } else if (t >= 20 && t < 23) {
-            skyColor = c.sunset.clone().lerp(c.midnight, (t - 20) / 3);
+            skyColor.copy(c.sunset).lerp(c.midnight, (t - 20) / 3);
         } else {
-            skyColor = c.midnight;
+            skyColor.copy(c.midnight);
         }
 
         this.scene.background = skyColor;
@@ -62,20 +62,26 @@ export class EnvironmentManager {
             skydome.material.color.copy(skyColor);
         }
 
-        const water = this.scene.getObjectByName("water");
-        if (water) {
+        // Apply colors to BOTH water meshes via their shared material
+        const water = this.scene.getObjectByName("water-inner");
+        if (water && water.material) {
             const dayFactor = Math.max(0, Math.sin(angle));
             const baseWaterColor = Settings.terrain.colors.sea;
-            const nightWaterColor = baseWaterColor.clone().multiplyScalar(0.1);
+            const nightWaterColor = new THREE.Color(0x00050a);
+
             water.material.color.copy(nightWaterColor).lerp(baseWaterColor, dayFactor);
+            // Ambient reflection of sky
+            water.material.emissive.copy(skyColor).multiplyScalar(0.08);
         }
 
         const dayFactor = Math.max(0, Math.sin(angle));
-        this.sunLight.intensity = dayFactor * 1.2;
-        this.ambientLight.intensity = 0.2 + (dayFactor * 0.3);
+        this.sunLight.intensity = dayFactor * 1.6;
+        this.ambientLight.intensity = 0.25 + (dayFactor * 0.35);
 
-        if (t > 17 || t < 8) {
+        if (t > 16 && t < 20) {
             this.sunLight.color.setHex(0xffaa88);
+        } else if (t > 5 && t < 9) {
+            this.sunLight.color.setHex(0xffccaa);
         } else {
             this.sunLight.color.setHex(0xffffff);
         }

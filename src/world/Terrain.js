@@ -5,7 +5,8 @@ export class Terrain {
     constructor(scene) {
         this.scene = scene;
         this.floor = null;
-        this.water = null;
+        this.water = null; // Inner water mesh
+        this.waterGroup = null;
         this.skydome = null;
 
         this.floorMaterial = new THREE.MeshStandardMaterial({
@@ -29,26 +30,26 @@ export class Terrain {
         const { size, quality } = Settings.terrain;
 
         if (this.floor) { this.scene.remove(this.floor); this.floor.geometry.dispose(); }
-        if (this.water) { this.scene.remove(this.water); this.water.geometry.dispose(); }
+        if (this.waterGroup) { this.scene.remove(this.waterGroup); }
         const oldSky = this.scene.getObjectByName("skydome");
         if (oldSky) { this.scene.remove(oldSky); oldSky.geometry.dispose(); }
 
         // Create Island
-        const floorGeometry = new THREE.PlaneGeometry(size, size, quality, quality);
+        const floorGeometry = new THREE.PlaneGeometry(size * 2, size * 2, quality, quality);
         const vertices = floorGeometry.attributes.position.array;
 
         for (let i = 0; i < vertices.length; i += 3) {
             const x = vertices[i];
             const y = vertices[i + 1];
-            const dx = (x / (size / 2));
-            const dy = (y / (size / 2));
-            const dist = Math.sqrt(dx * dx + dy * dy);
 
-            const edgeFactor = Math.max(0, 1 - Math.pow(dist, 3));
-            let height = (Math.sin(x * 0.2) + Math.cos(y * 0.2)) * 2;
-            height += (Math.sin(x * 0.5) * Math.cos(y * 0.5)) * 1.5;
+            const maxRadius = size;
+            const dist = Math.sqrt(x * x + y * y);
+            const edgeFactor = Math.pow(Math.max(0, 1 - dist / maxRadius), 2);
 
-            vertices[i + 2] = height * edgeFactor - (1 - edgeFactor) * 5;
+            let height = (Math.sin(x * 0.15) + Math.cos(y * 0.15)) * 2.5;
+            height += (Math.sin(x * 0.4) * Math.cos(y * 0.4)) * 1.5;
+
+            vertices[i + 2] = (height * edgeFactor) + (1 - edgeFactor) * -15;
         }
 
         floorGeometry.computeVertexNormals();
@@ -57,19 +58,34 @@ export class Terrain {
         this.floor = new THREE.Mesh(floorGeometry, this.floorMaterial);
         this.floor.rotation.x = -Math.PI / 2;
         this.floor.receiveShadow = true;
-        this.floor.position.y = 0;
         this.scene.add(this.floor);
 
-        // EXPANDED: Water Plane for "Infinite" look
-        const waterGeometry = new THREE.CircleGeometry(8000, 64);
-        this.water = new THREE.Mesh(waterGeometry, this.waterMaterial); this.water.name = "water";
-        this.water.rotation.x = -Math.PI / 2;
-        this.water.position.y = Settings.terrain.waterLevel;
-        this.water.receiveShadow = true;
-        this.scene.add(this.water);
+        // SMART WATER SYSTEM
+        this.waterGroup = new THREE.Group();
+        this.waterGroup.name = "water-system";
 
-        // EXPANDED: Skydome larger than water
-        const skyGeo = new THREE.SphereGeometry(8500, 32, 15);
+        // 1. Inner high-detail water for waves (covers immediate area)
+        const innerSize = Math.max(size * 5, 500);
+        const waterGeo = new THREE.PlaneGeometry(innerSize, innerSize, 100, 100);
+        this.waterInitialPositions = waterGeo.attributes.position.array.slice();
+        this.water = new THREE.Mesh(waterGeo, this.waterMaterial);
+        this.water.name = "water-inner";
+        this.water.receiveShadow = true;
+        this.waterGroup.add(this.water);
+
+        // 2. Outer massive circle for horizon (infinite look)
+        const outerGeo = new THREE.CircleGeometry(8500, 32);
+        const outerWater = new THREE.Mesh(outerGeo, this.waterMaterial);
+        outerWater.name = "water-outer";
+        outerWater.position.z = -0.05; // Slightly lower to avoid z-fighting
+        this.waterGroup.add(outerWater);
+
+        this.waterGroup.rotation.x = -Math.PI / 2;
+        this.waterGroup.position.y = Settings.terrain.waterLevel;
+        this.scene.add(this.waterGroup);
+
+        // Skydome
+        const skyGeo = new THREE.SphereGeometry(8000, 32, 15);
         const skyMat = new THREE.MeshBasicMaterial({
             side: THREE.BackSide,
             transparent: true,
@@ -90,15 +106,16 @@ export class Terrain {
 
         const dirtColor = Settings.terrain.colors.dirt;
         const grassColor = Settings.terrain.colors.grass;
-        // Darker seabed to avoid purple shore effect
-        const underwaterColor = dirtColor.clone().multiplyScalar(0.4);
+        const seaColor = Settings.terrain.colors.sea;
+        const underwaterColor = seaColor.clone().multiplyScalar(0.3);
 
         for (let i = 0; i < vertices.length; i += 3) {
             const height = vertices[i + 2];
             let color;
 
-            if (height < Settings.terrain.waterLevel + 0.1) {
-                color = underwaterColor;
+            if (height < Settings.terrain.waterLevel + 0.3) {
+                const depth = Math.abs(height - Settings.terrain.waterLevel);
+                color = underwaterColor.clone().lerp(dirtColor, Math.max(0, 1 - depth * 0.5));
             } else if (height < Settings.terrain.grassLevel) {
                 color = dirtColor;
             } else {
@@ -111,26 +128,45 @@ export class Terrain {
         }
         geo.attributes.color.needsUpdate = true;
 
-        this.water.position.y = Settings.terrain.waterLevel;
+        if (this.waterGroup) {
+            this.waterGroup.position.y = Settings.terrain.waterLevel;
+        }
+
         this.floorMaterial.flatShading = Settings.terrain.triangulated;
         this.floorMaterial.needsUpdate = true;
         this.waterMaterial.opacity = Settings.water.opacity;
-        // Initial color sync
-        this.waterMaterial.color.copy(Settings.terrain.colors.sea);
+        this.waterMaterial.color.copy(seaColor);
     }
 
     getHeight(x, z) {
         if (!this.floor) return 0;
-        const { size, quality } = Settings.terrain;
-        const gridX = ((x / size) + 0.5) * quality;
-        const gridZ = ((z / size) + 0.5) * quality;
-        const col = Math.round(gridX);
-        const row = Math.round(gridZ);
-        if (col < 0 || col > quality || row < 0 || row > quality) return Settings.terrain.waterLevel - 1;
-        const index = (row * (quality + 1) + col) * 3;
-        const h = this.floor.geometry.attributes.position.array[index + 2];
-        return (h !== undefined) ? h : Settings.terrain.waterLevel;
+        const raycaster = new THREE.Raycaster(
+            new THREE.Vector3(x, 100, z),
+            new THREE.Vector3(0, -1, 0)
+        );
+        const intersects = raycaster.intersectObject(this.floor);
+        return (intersects.length > 0) ? intersects[0].point.y : Settings.terrain.waterLevel - 1;
     }
 
-    updateWater(time) {}
+    updateWater(time) {
+        if (!this.water) return;
+
+        const positions = this.water.geometry.attributes.position.array;
+        const initial = this.waterInitialPositions;
+        const speed = Settings.water.speed;
+        const intensity = Settings.water.intensity;
+        const t = time * 0.001;
+
+        for (let i = 0; i < positions.length; i += 3) {
+            const x = initial[i];
+            const y = initial[i+1];
+
+            // Chunky low-poly waves
+            const wave1 = Math.sin(x * 0.08 + t * speed) * intensity;
+            const wave2 = Math.cos(y * 0.08 + t * speed * 0.7) * intensity;
+            positions[i + 2] = initial[i + 2] + wave1 + wave2;
+        }
+
+        this.water.geometry.attributes.position.needsUpdate = true;
+    }
 }

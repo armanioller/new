@@ -107,9 +107,10 @@ export class CameraManager {
 
         this.isoStableY = THREE.MathUtils.lerp(this.isoStableY, pPos.y, 5 * delta);
 
-        const x = pPos.x + dist * Math.sin(isoYaw) * Math.cos(isoPitch);
+        // DECOUPLED HEIGHT: x and z only use distance, y only uses height
+        const x = pPos.x + dist * Math.sin(isoYaw);
         const y = this.isoStableY + Settings.camera.height + Settings.camera.verticalOffset;
-        const z = pPos.z + dist * Math.cos(isoYaw) * Math.cos(isoPitch);
+        const z = pPos.z + dist * Math.cos(isoYaw);
 
         this.camera.position.set(x, y, z);
         this.camera.lookAt(pPos.x, this.isoStableY + Settings.camera.verticalOffset, pPos.z);
@@ -117,25 +118,22 @@ export class CameraManager {
 
     updateThirdPerson(pPos, player, delta) {
         if (player && !this.isRightMouseDown) {
-            // FIX: Chase the VISUAL rotation (smooth) instead of PHYSICAL rotation (instant)
             const visualRotY = player.group.rotation.y;
             this.thirdPersonTargetYaw = visualRotY + Math.PI;
 
             let yawDiff = this.thirdPersonTargetYaw - this.yaw;
             yawDiff = Math.atan2(Math.sin(yawDiff), Math.cos(yawDiff));
-
-            // Smoother chase factor
             this.yaw += yawDiff * Math.min(1.0, 3.0 * delta);
         }
 
         const dist = Settings.camera.distance;
-        const x = pPos.x + dist * Math.sin(this.yaw) * Math.cos(this.pitch);
+        // DECOUPLED HEIGHT: Horizontal distance is strictly horizontal
+        const x = pPos.x + dist * Math.sin(this.yaw);
         const y = pPos.y + Settings.camera.height + Settings.camera.verticalOffset;
-        const z = pPos.z + dist * Math.cos(this.yaw) * Math.cos(this.pitch);
+        const z = pPos.z + dist * Math.cos(this.yaw);
 
         this.camera.position.set(x, y, z);
 
-        // FIX: Focus uses VISUAL rotation for smooth tracking
         const forward = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(0, player ? player.group.rotation.y : 0, 0));
         const lookTarget = pPos.clone().add(forward.multiplyScalar(1.5));
         lookTarget.y += Settings.camera.verticalOffset;

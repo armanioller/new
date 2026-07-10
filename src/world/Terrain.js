@@ -15,7 +15,7 @@ export class Terrain {
 
         this.waterMaterial = new THREE.MeshStandardMaterial({
             color: 0x004466,
-            transparent: false,
+            transparent: true,
             opacity: Settings.water.opacity,
             flatShading: true,
             roughness: 0.1,
@@ -72,7 +72,7 @@ export class Terrain {
         const skyGeo = new THREE.SphereGeometry(8500, 32, 15);
         const skyMat = new THREE.MeshBasicMaterial({
             side: THREE.BackSide,
-            transparent: false,
+            transparent: true,
             opacity: 1
         });
         this.skydome = new THREE.Mesh(skyGeo, skyMat);
@@ -88,16 +88,22 @@ export class Terrain {
         const vertices = geo.attributes.position.array;
         const colors = geo.attributes.color.array;
 
-        const seaColor = Settings.terrain.colors.sea;
         const dirtColor = Settings.terrain.colors.dirt;
         const grassColor = Settings.terrain.colors.grass;
+        // Darker seabed to avoid purple shore effect
+        const underwaterColor = dirtColor.clone().multiplyScalar(0.4);
 
         for (let i = 0; i < vertices.length; i += 3) {
             const height = vertices[i + 2];
             let color;
-            if (height < Settings.terrain.waterLevel + 0.1) color = seaColor;
-            else if (height < Settings.terrain.grassLevel) color = dirtColor;
-            else color = grassColor;
+
+            if (height < Settings.terrain.waterLevel + 0.1) {
+                color = underwaterColor;
+            } else if (height < Settings.terrain.grassLevel) {
+                color = dirtColor;
+            } else {
+                color = grassColor;
+            }
 
             colors[i] = color.r;
             colors[i+1] = color.g;
@@ -109,6 +115,7 @@ export class Terrain {
         this.floorMaterial.flatShading = Settings.terrain.triangulated;
         this.floorMaterial.needsUpdate = true;
         this.waterMaterial.opacity = Settings.water.opacity;
+        // Initial color sync
         this.waterMaterial.color.copy(Settings.terrain.colors.sea);
     }
 

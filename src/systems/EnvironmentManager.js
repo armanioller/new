@@ -65,8 +65,8 @@ export class EnvironmentManager {
         const water = this.scene.getObjectByName("water");
         if (water) {
             const dayFactor = Math.max(0, Math.sin(angle));
-            const baseWaterColor = new THREE.Color(0x004466);
-            const nightWaterColor = new THREE.Color(0x000811);
+            const baseWaterColor = Settings.terrain.colors.sea;
+            const nightWaterColor = baseWaterColor.clone().multiplyScalar(0.1);
             water.material.color.copy(nightWaterColor).lerp(baseWaterColor, dayFactor);
         }
 

@@ -94,9 +94,6 @@ export class Player {
         const isOneShot = ['punch', 'jump', 'thumbsup', 'no', 'wave'].includes(currentAnimName);
         const isActionBusy = isOneShot && this.currentAction.isRunning() && this.currentAction.time < this.currentAction.getClip().duration * 0.8;
 
-        if (this.mixer) this.mixer.update(delta);
-        if (Settings.camera.mode === 'free') return;
-
         const moveX = (this.keys.d ? 1 : 0) - (this.keys.a ? 1 : 0);
         const moveZ = (this.keys.s ? 1 : 0) - (this.keys.w ? 1 : 0);
         const isMoving = moveX !== 0 || moveZ !== 0;
@@ -120,7 +117,16 @@ export class Player {
 
             const baseSpeed = isRunning ? Settings.player.moveSpeed * 1.8 : Settings.player.moveSpeed;
             const speed = baseSpeed * delta;
-            this.group.position.addScaledVector(moveVec, speed);
+
+            const nextPos = this.group.position.clone().addScaledVector(moveVec, speed);
+
+            // Movement Boundary: Prevent walking off the island mesh entirely
+            const distFromCenter = Math.sqrt(nextPos.x * nextPos.x + nextPos.z * nextPos.z);
+            const maxBound = Settings.terrain.size * 1.1; // Stay within visible mesh
+
+            if (distFromCenter < maxBound) {
+                this.group.position.copy(nextPos);
+            }
 
             if (!isActionBusy) {
                 this.fadeToAction(isRunning ? 'running' : 'walking');
@@ -159,8 +165,8 @@ export class Player {
         this.group.rotation.y += rotDiff * Math.min(1.0, 3.5 * delta);
 
         const h = this.terrain.getHeight(this.group.position.x, this.group.position.z);
-        // Instant Y snap if walking on seabed to satisfy physics tests, lerp for visual smoothness on land
         const targetY = h + this.jumpHeight;
+
         if (h < Settings.terrain.waterLevel) {
              this.group.position.y = targetY; // Instant snap underwater
         } else {

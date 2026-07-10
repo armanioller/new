@@ -7,3 +7,7 @@
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
+2:44:38 PM [vite] (client) page reload src/Game.js
+2:49:16 PM [vite] (client) page reload src/Game.js
+3:04:55 PM [vite] (client) page reload src/world/Terrain.js
+3:12:49 PM [vite] (client) page reload src/entities/Player.js

@@ -1,9 +1,9 @@
-npm error Missing script: "start"
-npm error
-npm error Did you mean one of these?
-npm error   npm star # Mark your favorite packages
-npm error   npm stars # View packages marked as favorites
-npm error
-npm error To see a list of scripts, run:
-npm error   npm run
-npm error A complete log of this run can be found in: /home/jules/.npm/_logs/2026-07-08T23_59_03_241Z-debug-0.log
+
+> rpg-lowpoly@1.0.0 dev
+> vite
+
+
+  VITE v6.4.3  ready in 300 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose

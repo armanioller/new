@@ -34,22 +34,27 @@ export class Terrain {
         const oldSky = this.scene.getObjectByName("skydome");
         if (oldSky) { this.scene.remove(oldSky); oldSky.geometry.dispose(); }
 
-        // Create Island
-        const floorGeometry = new THREE.PlaneGeometry(size * 2, size * 2, quality, quality);
+        // Create Island - Large enough to fade into fog/depth
+        const floorSize = size * 2.5;
+        const floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize, quality, quality);
         const vertices = floorGeometry.attributes.position.array;
 
         for (let i = 0; i < vertices.length; i += 3) {
             const x = vertices[i];
             const y = vertices[i + 1];
 
-            const maxRadius = size;
             const dist = Math.sqrt(x * x + y * y);
-            const edgeFactor = Math.pow(Math.max(0, 1 - dist / maxRadius), 2);
+            const islandRadius = size * 0.8;
+
+            // Smoother falloff
+            const edgeFactor = Math.pow(Math.max(0, 1 - dist / islandRadius), 1.5);
 
             let height = (Math.sin(x * 0.15) + Math.cos(y * 0.15)) * 2.5;
             height += (Math.sin(x * 0.4) * Math.cos(y * 0.4)) * 1.5;
 
-            vertices[i + 2] = (height * edgeFactor) + (1 - edgeFactor) * -15;
+            // Deep drop-off for edges to hide mesh walls
+            const deepBottom = -40;
+            vertices[i + 2] = (height * edgeFactor) + (1 - edgeFactor) * deepBottom;
         }
 
         floorGeometry.computeVertexNormals();
@@ -65,8 +70,9 @@ export class Terrain {
         this.waterGroup.name = "water-system";
 
         // 1. Inner high-detail water for waves (covers immediate area)
-        const innerSize = Math.max(size * 5, 500);
-        const waterGeo = new THREE.PlaneGeometry(innerSize, innerSize, 100, 100);
+        // Increased subdivisions for smaller "stains"
+        const innerSize = Math.max(size * 6, 600);
+        const waterGeo = new THREE.PlaneGeometry(innerSize, innerSize, 200, 200);
         this.waterInitialPositions = waterGeo.attributes.position.array.slice();
         this.water = new THREE.Mesh(waterGeo, this.waterMaterial);
         this.water.name = "water-inner";
@@ -107,15 +113,18 @@ export class Terrain {
         const dirtColor = Settings.terrain.colors.dirt;
         const grassColor = Settings.terrain.colors.grass;
         const seaColor = Settings.terrain.colors.sea;
-        const underwaterColor = seaColor.clone().multiplyScalar(0.3);
+        // Darker underwater color for depth
+        const underwaterColor = seaColor.clone().multiplyScalar(0.2);
 
         for (let i = 0; i < vertices.length; i += 3) {
             const height = vertices[i + 2];
             let color;
 
             if (height < Settings.terrain.waterLevel + 0.3) {
-                const depth = Math.abs(height - Settings.terrain.waterLevel);
-                color = underwaterColor.clone().lerp(dirtColor, Math.max(0, 1 - depth * 0.5));
+                const depth = Math.max(0, Settings.terrain.waterLevel - height);
+                // Darken significantly as it goes deeper to hide the bottom/edges
+                const depthFactor = Math.min(1, depth / 15);
+                color = dirtColor.clone().lerp(underwaterColor, depthFactor);
             } else if (height < Settings.terrain.grassLevel) {
                 color = dirtColor;
             } else {
@@ -145,7 +154,7 @@ export class Terrain {
             new THREE.Vector3(0, -1, 0)
         );
         const intersects = raycaster.intersectObject(this.floor);
-        return (intersects.length > 0) ? intersects[0].point.y : Settings.terrain.waterLevel - 1;
+        return (intersects.length > 0) ? intersects[0].point.y : -40;
     }
 
     updateWater(time) {
@@ -154,16 +163,16 @@ export class Terrain {
         const positions = this.water.geometry.attributes.position.array;
         const initial = this.waterInitialPositions;
         const speed = Settings.water.speed;
-        const intensity = Settings.water.intensity;
+        const intensity = Settings.water.intensity * 0.5; // Making it more subtle
         const t = time * 0.001;
 
         for (let i = 0; i < positions.length; i += 3) {
             const x = initial[i];
             const y = initial[i+1];
 
-            // Chunky low-poly waves
-            const wave1 = Math.sin(x * 0.08 + t * speed) * intensity;
-            const wave2 = Math.cos(y * 0.08 + t * speed * 0.7) * intensity;
+            // Higher frequency (0.2 instead of 0.08) for smaller stains
+            const wave1 = Math.sin(x * 0.2 + t * speed) * intensity;
+            const wave2 = Math.cos(y * 0.2 + t * speed * 0.7) * intensity;
             positions[i + 2] = initial[i + 2] + wave1 + wave2;
         }
 

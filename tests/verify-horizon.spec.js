@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('Verify Horizon Blending and Colors', async ({ page }) => {
-    await page.goto('http://localhost:8080');
+    await page.goto('http://localhost:5173');
     await page.waitForTimeout(2000);
 
     // Check if UI is visible

@@ -4,14 +4,15 @@ export class UIManager {
     constructor(game) {
         this.game = game;
         this.elements = {
-            settingsToggle: document.getElementById('settings-toggle'),
-            settingsMenu: document.getElementById('settings-menu'),
+            settingsToggle: document.querySelector('.ui-icon-button'),
+            settingsMenu: document.querySelector('.sidebar'),
             tabButtons: document.querySelectorAll('.tab-btn'),
             tabContents: document.querySelectorAll('.tab-content'),
             timeDisplay: document.getElementById('time-display'),
+            // Controls
+            realTimeToggle: document.getElementById('time-realtime'),
+            timeFreezeToggle: document.getElementById('time-freeze'),
             timeSlider: document.getElementById('time-slider'),
-            realTimeToggle: document.getElementById('real-time-toggle'),
-            timeFreezeToggle: document.getElementById('time-freeze-toggle'),
             timeSpeed: document.getElementById('time-speed'),
             cameraMode: document.getElementById('camera-mode'),
             cameraDistance: document.getElementById('camera-distance'),
@@ -48,7 +49,8 @@ export class UIManager {
 
     init() {
         this.elements.settingsToggle.addEventListener('click', () => {
-            this.elements.settingsMenu.classList.toggle('open');
+            const isOpen = this.elements.settingsMenu.classList.toggle('open');
+            this.elements.settingsToggle.classList.toggle('sidebar-open', isOpen);
         });
 
         this.elements.tabButtons.forEach(btn => {
@@ -74,7 +76,9 @@ export class UIManager {
         // Camera
         this.elements.cameraMode.addEventListener('change', (e) => {
             Settings.camera.mode = e.target.value;
-            if (e.target.value !== 'firstperson' && document.pointerLockElement) {
+            if (e.target.value === 'firstperson') {
+                this.game.engine.renderer.domElement.requestPointerLock();
+            } else if (document.pointerLockElement) {
                 document.exitPointerLock();
             }
         });
@@ -97,7 +101,7 @@ export class UIManager {
         });
         this.elements.terrainDepth.addEventListener('input', (e) => {
             Settings.terrain.seaDepth = parseFloat(e.target.value);
-            this.game.terrain.init(); // Need re-init for geometry change
+            this.game.terrain.init();
         });
         this.elements.waterOpacity.addEventListener('input', (e) => {
             Settings.water.opacity = parseFloat(e.target.value);
@@ -192,7 +196,9 @@ export class UIManager {
         this.elements.terrainDepth.value = Settings.terrain.seaDepth;
         this.elements.waterOpacity.value = Settings.water.opacity;
 
-        document.getElementById('manual-time-controls').style.display = Settings.time.useRealTime ? 'none' : 'block';
+        const manual = document.getElementById('manual-time-controls');
+        if (manual) manual.style.display = Settings.time.useRealTime ? 'none' : 'block';
+
         this.elements.colorSea.value = '#' + Settings.terrain.colors.sea.getHexString();
         this.elements.colorDirt.value = '#' + Settings.terrain.colors.dirt.getHexString();
         this.elements.colorGrass.value = '#' + Settings.terrain.colors.grass.getHexString();

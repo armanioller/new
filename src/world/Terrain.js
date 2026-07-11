@@ -23,7 +23,7 @@ export class Terrain {
         });
 
         this._tempColor = new THREE.Color();
-        this._depthColor = new THREE.Color(0x000102); // Even darker
+        this._depthColor = new THREE.Color(0x000102);
 
         this.init();
     }
@@ -36,9 +36,12 @@ export class Terrain {
         const oldSky = this.scene.getObjectByName("skydome");
         if (oldSky) { this.scene.remove(oldSky); oldSky.geometry.dispose(); }
 
-        const floorSize = size * 12; // Increased size slightly more
-        const floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize, quality + 20, quality + 20);
+        const floorSize = size * 15;
+        const floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize, quality + 25, quality + 25);
         const vertices = floorGeometry.attributes.position.array;
+
+        const maxRadius = floorSize / 2;
+        const dropStart = maxRadius * 0.8;
 
         for (let i = 0; i < vertices.length; i += 3) {
             const x = vertices[i];
@@ -48,16 +51,23 @@ export class Terrain {
             const islandRadius = size * 0.8;
 
             let height = 0;
-            let edgeFactor = 0;
 
             if (dist < islandRadius * 3) {
-                edgeFactor = Math.pow(Math.max(0, 1 - dist / (islandRadius * 2)), 2.0);
+                const edgeFactor = Math.pow(Math.max(0, 1 - dist / (islandRadius * 2)), 2.0);
                 height = (Math.sin(x * 0.15) + Math.cos(y * 0.15)) * 2.5;
                 height += (Math.sin(x * 0.4) * Math.cos(y * 0.4)) * 1.5;
-                vertices[i + 2] = (height * edgeFactor) + (1 - edgeFactor) * seaDepth;
+                height = (height * edgeFactor) + (1 - edgeFactor) * seaDepth;
             } else {
-                vertices[i + 2] = seaDepth;
+                height = seaDepth;
             }
+
+            // Steep drop-off to hide mesh boundary
+            if (dist > dropStart) {
+                const dropFactor = (dist - dropStart) / (maxRadius - dropStart);
+                height = THREE.MathUtils.lerp(height, -500, Math.pow(dropFactor, 2.0));
+            }
+
+            vertices[i + 2] = height;
         }
 
         floorGeometry.computeVertexNormals();
@@ -68,7 +78,7 @@ export class Terrain {
         this.floor.receiveShadow = true;
         this.scene.add(this.floor);
 
-        const waterGeo = new THREE.CircleGeometry(9000, 64);
+        const waterGeo = new THREE.CircleGeometry(10000, 64);
         this.water = new THREE.Mesh(waterGeo, this.waterMaterial);
         this.water.name = "water";
         this.water.rotation.x = -Math.PI / 2;
@@ -76,7 +86,7 @@ export class Terrain {
         this.water.receiveShadow = true;
         this.scene.add(this.water);
 
-        const skyGeo = new THREE.SphereGeometry(8500, 32, 15);
+        const skyGeo = new THREE.SphereGeometry(9500, 32, 15);
         const skyMat = new THREE.MeshBasicMaterial({
             side: THREE.BackSide,
             transparent: true,
@@ -100,8 +110,9 @@ export class Terrain {
         const seaColor = Settings.terrain.colors.sea;
         const targetFogColor = fogColor || this._tempColor.set(0x87ceeb);
 
-        const floorSize = Settings.terrain.size * 12;
-        const maxDist = (floorSize / 2);
+        const floorSize = Settings.terrain.size * 15;
+        const maxRadius = floorSize / 2;
+        const fadeStart = maxRadius * 0.5;
 
         for (let i = 0, j = 0; i < vertices.length; i += 3, j += 3) {
             const vx = vertices[i];
@@ -110,7 +121,7 @@ export class Terrain {
 
             if (height < Settings.terrain.waterLevel + 0.3) {
                 const depth = Math.max(0, Settings.terrain.waterLevel - height);
-                const depthFactor = Math.min(1, depth / 10); // Faster transition to dark
+                const depthFactor = Math.min(1, depth / 15);
                 this._tempColor.copy(dirtColor).lerp(this._depthColor, depthFactor);
             } else if (height < Settings.terrain.grassLevel) {
                 this._tempColor.copy(dirtColor);
@@ -119,9 +130,9 @@ export class Terrain {
             }
 
             const dist = Math.sqrt(vx * vx + vy * vy);
-            if (dist > maxDist * 0.4) {
-                const fadeFactor = Math.min(1, (dist - maxDist * 0.4) / (maxDist * 0.6));
-                this._tempColor.lerp(targetFogColor, fadeFactor);
+            if (dist > fadeStart) {
+                const fadeFactor = Math.min(1, (dist - fadeStart) / (maxRadius - fadeStart));
+                this._tempColor.lerp(targetFogColor, Math.pow(fadeFactor, 1.2));
             }
 
             colors[j] = this._tempColor.r;

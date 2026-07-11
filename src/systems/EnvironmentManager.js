@@ -22,7 +22,7 @@ export class EnvironmentManager {
         this.scene.add(this.sunLight);
 
         // THICK FOG
-        this.fog = new THREE.FogExp2(0x87ceeb, 0.0012);
+        this.fog = new THREE.FogExp2(0x87ceeb, 0.0025);
         this.scene.fog = this.fog;
 
         this.initStars();
@@ -132,7 +132,7 @@ export class EnvironmentManager {
         if (this.scene.fog) {
             this.scene.fog.color.copy(skyColor);
             const dayFactor = Math.max(0, Math.sin(angle));
-            this.scene.fog.density = 0.0012 + (1 - dayFactor) * 0.0008;
+            this.scene.fog.density = 0.0025 + (1 - dayFactor) * 0.0015;
         }
 
         const skydome = this.scene.getObjectByName("skydome");

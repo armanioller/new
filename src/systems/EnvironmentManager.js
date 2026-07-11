@@ -29,35 +29,75 @@ export class EnvironmentManager {
     }
 
     initStars() {
-        const starCount = 3000;
-        const starGeometry = new THREE.BufferAttribute(new Float32Array(starCount * 3), 3);
-        const starPositions = starGeometry.array;
+        const starCount = 4000;
+        const positions = new Float32Array(starCount * 3);
+        const sizes = new Float32Array(starCount);
+        const twinkleSeeds = new Float32Array(starCount);
 
         for (let i = 0; i < starCount; i++) {
             const i3 = i * 3;
-            // Distribute stars on a large sphere
-            const r = 8000;
+            const r = 7000 + Math.random() * 2000;
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.acos(2 * Math.random() - 1);
 
-            starPositions[i3] = r * Math.sin(phi) * Math.cos(theta);
-            starPositions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-            starPositions[i3 + 2] = r * Math.cos(phi);
+            positions[i3] = r * Math.sin(phi) * Math.cos(theta);
+            positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            positions[i3 + 2] = r * Math.cos(phi);
+
+            sizes[i] = 1.0 + Math.random() * 3.0;
+            twinkleSeeds[i] = Math.random() * 10.0;
         }
 
-        const bufferGeometry = new THREE.BufferGeometry();
-        bufferGeometry.setAttribute('position', starGeometry);
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+        geometry.setAttribute('twinkleSeed', new THREE.BufferAttribute(twinkleSeeds, 1));
 
-        this.starMaterial = new THREE.PointsMaterial({
-            color: 0xffffff,
-            size: 2,
-            sizeAttenuation: false,
+        this.starUniforms = {
+            uTime: { value: 0 },
+            uOpacity: { value: 0 },
+            uColor: { value: new THREE.Color(0xffffff) }
+        };
+
+        const vertexShader = `
+            attribute float size;
+            attribute float twinkleSeed;
+            uniform float uTime;
+            varying float vTwinkle;
+
+            void main() {
+                vTwinkle = sin(uTime * 3.0 + twinkleSeed) * 0.5 + 0.5;
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                gl_PointSize = size;
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `;
+
+        const fragmentShader = `
+            uniform vec3 uColor;
+            uniform float uOpacity;
+            varying float vTwinkle;
+
+            void main() {
+                float dist = distance(gl_PointCoord, vec2(0.5));
+                if (dist > 0.5) discard;
+
+                // Twinkling effect: modulate brightness slightly
+                float brightness = 0.7 + vTwinkle * 0.3;
+                gl_FragColor = vec4(uColor, uOpacity * brightness);
+            }
+        `;
+
+        this.starMaterial = new THREE.ShaderMaterial({
+            uniforms: this.starUniforms,
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader,
             transparent: true,
-            opacity: 0,
-            fog: false // Stars shouldn't be affected by ground fog
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
         });
 
-        this.stars = new THREE.Points(bufferGeometry, this.starMaterial);
+        this.stars = new THREE.Points(geometry, this.starMaterial);
         this.stars.name = "stars";
         this.scene.add(this.stars);
     }
@@ -100,8 +140,7 @@ export class EnvironmentManager {
             skydome.material.color.copy(skyColor);
         }
 
-        // UPDATE STARS OPACITY
-        // Stars should be visible when it's dark
+        // UPDATE STARS OPACITY AND TIME
         let starOpacity = 0;
         if (t < 5 || t > 20) {
             starOpacity = 1;
@@ -112,10 +151,9 @@ export class EnvironmentManager {
         }
 
         if (this.starMaterial) {
-            this.starMaterial.opacity = starOpacity;
+            this.starUniforms.uOpacity.value = starOpacity;
+            this.starUniforms.uTime.value = performance.now() / 1000;
             this.stars.visible = starOpacity > 0;
-            // Rotate stars slightly for life
-            this.stars.rotation.y += 0.0001;
         }
 
         const water = this.scene.getObjectByName("water");

@@ -40,7 +40,10 @@ class Game {
         const time = this.engine.clock.getElapsedTime() * 1000;
 
         this.updateTime();
-        this.environment.update(Settings.time.timeOfDay);
+        const currentSkyColor = this.environment.update(Settings.time.timeOfDay);
+
+        // SYNC TERRAIN FADING WITH SKY COLOR
+        this.terrain.updateVisuals(currentSkyColor);
         this.terrain.updateWater(time);
 
         this.player.update(delta, this.cameraManager.camera);

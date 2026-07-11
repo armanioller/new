@@ -21,8 +21,8 @@ export class EnvironmentManager {
         this.sunLight.shadow.camera.far = 2500;
         this.scene.add(this.sunLight);
 
-        // THICK FOG for seamless horizon
-        this.fog = new THREE.FogExp2(0x87ceeb, 0.0006);
+        // THICK FOG
+        this.fog = new THREE.FogExp2(0x87ceeb, 0.0012);
         this.scene.fog = this.fog;
     }
 
@@ -55,6 +55,9 @@ export class EnvironmentManager {
         this.scene.background = skyColor;
         if (this.scene.fog) {
             this.scene.fog.color.copy(skyColor);
+            const dayFactor = Math.max(0, Math.sin(angle));
+            // Fog density varies slightly with time of day
+            this.scene.fog.density = 0.0012 + (1 - dayFactor) * 0.0008;
         }
 
         const skydome = this.scene.getObjectByName("skydome");
@@ -69,7 +72,6 @@ export class EnvironmentManager {
             const nightWaterColor = new THREE.Color(0x00050a);
 
             water.material.color.copy(nightWaterColor).lerp(baseWaterColor, dayFactor);
-            // Ambient reflection of sky - very subtle
             water.material.emissive.copy(skyColor).multiplyScalar(0.04);
         }
 
@@ -84,5 +86,7 @@ export class EnvironmentManager {
         } else {
             this.sunLight.color.setHex(0xffffff);
         }
+
+        return skyColor;
     }
 }

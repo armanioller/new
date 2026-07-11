@@ -22,6 +22,9 @@ export class Terrain {
             flatShading: false
         });
 
+        this._tempColor = new THREE.Color();
+        this._depthColor = new THREE.Color(0x000102); // Even darker
+
         this.init();
     }
 
@@ -33,9 +36,8 @@ export class Terrain {
         const oldSky = this.scene.getObjectByName("skydome");
         if (oldSky) { this.scene.remove(oldSky); oldSky.geometry.dispose(); }
 
-        // Create Island
-        const floorSize = size * 2.5;
-        const floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize, quality, quality);
+        const floorSize = size * 12; // Increased size slightly more
+        const floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize, quality + 20, quality + 20);
         const vertices = floorGeometry.attributes.position.array;
 
         for (let i = 0; i < vertices.length; i += 3) {
@@ -44,13 +46,18 @@ export class Terrain {
 
             const dist = Math.sqrt(x * x + y * y);
             const islandRadius = size * 0.8;
-            const edgeFactor = Math.pow(Math.max(0, 1 - dist / islandRadius), 1.5);
 
-            let height = (Math.sin(x * 0.15) + Math.cos(y * 0.15)) * 2.5;
-            height += (Math.sin(x * 0.4) * Math.cos(y * 0.4)) * 1.5;
+            let height = 0;
+            let edgeFactor = 0;
 
-            // Dynamic depth based on settings
-            vertices[i + 2] = (height * edgeFactor) + (1 - edgeFactor) * seaDepth;
+            if (dist < islandRadius * 3) {
+                edgeFactor = Math.pow(Math.max(0, 1 - dist / (islandRadius * 2)), 2.0);
+                height = (Math.sin(x * 0.15) + Math.cos(y * 0.15)) * 2.5;
+                height += (Math.sin(x * 0.4) * Math.cos(y * 0.4)) * 1.5;
+                vertices[i + 2] = (height * edgeFactor) + (1 - edgeFactor) * seaDepth;
+            } else {
+                vertices[i + 2] = seaDepth;
+            }
         }
 
         floorGeometry.computeVertexNormals();
@@ -61,7 +68,6 @@ export class Terrain {
         this.floor.receiveShadow = true;
         this.scene.add(this.floor);
 
-        // Single massive water mesh
         const waterGeo = new THREE.CircleGeometry(9000, 64);
         this.water = new THREE.Mesh(waterGeo, this.waterMaterial);
         this.water.name = "water";
@@ -70,7 +76,6 @@ export class Terrain {
         this.water.receiveShadow = true;
         this.scene.add(this.water);
 
-        // Skydome
         const skyGeo = new THREE.SphereGeometry(8500, 32, 15);
         const skyMat = new THREE.MeshBasicMaterial({
             side: THREE.BackSide,
@@ -84,7 +89,7 @@ export class Terrain {
         this.updateVisuals();
     }
 
-    updateVisuals() {
+    updateVisuals(fogColor = null) {
         if (!this.floor) return;
         const geo = this.floor.geometry;
         const vertices = geo.attributes.position.array;
@@ -93,25 +98,35 @@ export class Terrain {
         const dirtColor = Settings.terrain.colors.dirt;
         const grassColor = Settings.terrain.colors.grass;
         const seaColor = Settings.terrain.colors.sea;
-        const depthColor = new THREE.Color(0x000204);
+        const targetFogColor = fogColor || this._tempColor.set(0x87ceeb);
 
-        for (let i = 0; i < vertices.length; i += 3) {
+        const floorSize = Settings.terrain.size * 12;
+        const maxDist = (floorSize / 2);
+
+        for (let i = 0, j = 0; i < vertices.length; i += 3, j += 3) {
+            const vx = vertices[i];
+            const vy = vertices[i+1];
             const height = vertices[i + 2];
-            let color;
 
             if (height < Settings.terrain.waterLevel + 0.3) {
                 const depth = Math.max(0, Settings.terrain.waterLevel - height);
-                const depthFactor = Math.min(1, depth / 10);
-                color = dirtColor.clone().lerp(depthColor, depthFactor);
+                const depthFactor = Math.min(1, depth / 10); // Faster transition to dark
+                this._tempColor.copy(dirtColor).lerp(this._depthColor, depthFactor);
             } else if (height < Settings.terrain.grassLevel) {
-                color = dirtColor;
+                this._tempColor.copy(dirtColor);
             } else {
-                color = grassColor;
+                this._tempColor.copy(grassColor);
             }
 
-            colors[i] = color.r;
-            colors[i+1] = color.g;
-            colors[i+2] = color.b;
+            const dist = Math.sqrt(vx * vx + vy * vy);
+            if (dist > maxDist * 0.4) {
+                const fadeFactor = Math.min(1, (dist - maxDist * 0.4) / (maxDist * 0.6));
+                this._tempColor.lerp(targetFogColor, fadeFactor);
+            }
+
+            colors[j] = this._tempColor.r;
+            colors[j+1] = this._tempColor.g;
+            colors[j+2] = this._tempColor.b;
         }
         geo.attributes.color.needsUpdate = true;
 
@@ -119,11 +134,12 @@ export class Terrain {
             this.water.position.y = Settings.terrain.waterLevel;
             this.water.material.opacity = Settings.water.opacity;
             this.water.material.color.copy(seaColor);
-            this.water.material.needsUpdate = true;
         }
 
-        this.floorMaterial.flatShading = Settings.terrain.triangulated;
-        this.floorMaterial.needsUpdate = true;
+        if (this.floorMaterial.flatShading !== Settings.terrain.triangulated) {
+            this.floorMaterial.flatShading = Settings.terrain.triangulated;
+            this.floorMaterial.needsUpdate = true;
+        }
     }
 
     getHeight(x, z) {
@@ -137,6 +153,5 @@ export class Terrain {
     }
 
     updateWater(time) {
-        // No waves as requested
     }
 }

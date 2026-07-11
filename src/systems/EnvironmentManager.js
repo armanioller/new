@@ -24,6 +24,42 @@ export class EnvironmentManager {
         // THICK FOG
         this.fog = new THREE.FogExp2(0x87ceeb, 0.0012);
         this.scene.fog = this.fog;
+
+        this.initStars();
+    }
+
+    initStars() {
+        const starCount = 3000;
+        const starGeometry = new THREE.BufferAttribute(new Float32Array(starCount * 3), 3);
+        const starPositions = starGeometry.array;
+
+        for (let i = 0; i < starCount; i++) {
+            const i3 = i * 3;
+            // Distribute stars on a large sphere
+            const r = 8000;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+
+            starPositions[i3] = r * Math.sin(phi) * Math.cos(theta);
+            starPositions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            starPositions[i3 + 2] = r * Math.cos(phi);
+        }
+
+        const bufferGeometry = new THREE.BufferGeometry();
+        bufferGeometry.setAttribute('position', starGeometry);
+
+        this.starMaterial = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 2,
+            sizeAttenuation: false,
+            transparent: true,
+            opacity: 0,
+            fog: false // Stars shouldn't be affected by ground fog
+        });
+
+        this.stars = new THREE.Points(bufferGeometry, this.starMaterial);
+        this.stars.name = "stars";
+        this.scene.add(this.stars);
     }
 
     update(timeOfDay) {
@@ -56,13 +92,30 @@ export class EnvironmentManager {
         if (this.scene.fog) {
             this.scene.fog.color.copy(skyColor);
             const dayFactor = Math.max(0, Math.sin(angle));
-            // Fog density varies slightly with time of day
             this.scene.fog.density = 0.0012 + (1 - dayFactor) * 0.0008;
         }
 
         const skydome = this.scene.getObjectByName("skydome");
         if (skydome) {
             skydome.material.color.copy(skyColor);
+        }
+
+        // UPDATE STARS OPACITY
+        // Stars should be visible when it's dark
+        let starOpacity = 0;
+        if (t < 5 || t > 20) {
+            starOpacity = 1;
+        } else if (t >= 5 && t < 7) {
+            starOpacity = 1 - (t - 5) / 2;
+        } else if (t >= 18 && t <= 20) {
+            starOpacity = (t - 18) / 2;
+        }
+
+        if (this.starMaterial) {
+            this.starMaterial.opacity = starOpacity;
+            this.stars.visible = starOpacity > 0;
+            // Rotate stars slightly for life
+            this.stars.rotation.y += 0.0001;
         }
 
         const water = this.scene.getObjectByName("water");

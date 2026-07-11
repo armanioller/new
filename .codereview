@@ -1,0 +1,8 @@
+Review of changes:
+1. Terrain logic: increased dropStart and islandRadius to maximize playable mesh area. Correct.
+2. UI: added value displays for sliders. Correct.
+3. Settings: updated defaults. Correct.
+
+Observation: Verification script showed empty values in spans.
+Possible cause: syncUI might be called before DOM is fully ready or some other race condition in the test environment.
+Action: Will add a small delay or ensure syncUI is robust.

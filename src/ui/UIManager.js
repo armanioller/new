@@ -35,6 +35,13 @@ export class UIManager {
             btnResetDefaults: document.getElementById('btn-reset-defaults'),
             woodCount: document.getElementById('count-wood'),
             stoneCount: document.getElementById('count-stone'),
+            valCameraDistance: document.getElementById("val-camera-distance"),
+            valCameraHeight: document.getElementById("val-camera-height"),
+            valCameraOffset: document.getElementById("val-camera-offset"),
+            valTerrainSize: document.getElementById("val-terrain-size"),
+            valTerrainQuality: document.getElementById("val-terrain-quality"),
+            valTerrainDepth: document.getElementById("val-terrain-depth"),
+            valWaterOpacity: document.getElementById("val-water-opacity"),
             buildList: document.getElementById('build-list'),
             // Modal
             modal: document.getElementById('global-modal'),
@@ -95,25 +102,25 @@ export class UIManager {
             });
         }
         if (this.elements.cameraDistance) {
-            this.elements.cameraDistance.addEventListener('input', (e) => Settings.camera.distance = parseFloat(e.target.value));
+            this.elements.cameraDistance.addEventListener('input', (e) => Settings.camera.distance = parseFloat(e.target.value); if(this.elements.valCameraDistance) this.elements.valCameraDistance.innerText = e.target.value);
         }
         if (this.elements.cameraHeight) {
-            this.elements.cameraHeight.addEventListener('input', (e) => Settings.camera.height = parseFloat(e.target.value));
+            this.elements.cameraHeight.addEventListener('input', (e) => Settings.camera.height = parseFloat(e.target.value); if(this.elements.valCameraHeight) this.elements.valCameraHeight.innerText = e.target.value);
         }
         if (this.elements.cameraOffset) {
-            this.elements.cameraOffset.addEventListener('input', (e) => Settings.camera.verticalOffset = parseFloat(e.target.value));
+            this.elements.cameraOffset.addEventListener('input', (e) => Settings.camera.verticalOffset = parseFloat(e.target.value); if(this.elements.valCameraOffset) this.elements.valCameraOffset.innerText = parseFloat(e.target.value).toFixed(1));
         }
 
         // Terrain
         if (this.elements.terrainSize) {
             this.elements.terrainSize.addEventListener('change', (e) => {
-                Settings.terrain.size = parseInt(e.target.value);
+                Settings.terrain.size = parseInt(e.target.value); if(this.elements.valTerrainSize) this.elements.valTerrainSize.innerText = e.target.value;
                 this.game.terrain.init();
             });
         }
         if (this.elements.terrainQuality) {
             this.elements.terrainQuality.addEventListener('change', (e) => {
-                Settings.terrain.quality = parseInt(e.target.value);
+                Settings.terrain.quality = parseInt(e.target.value); if(this.elements.valTerrainQuality) this.elements.valTerrainQuality.innerText = e.target.value;
                 this.game.terrain.init();
             });
         }
@@ -125,13 +132,13 @@ export class UIManager {
         }
         if (this.elements.terrainDepth) {
             this.elements.terrainDepth.addEventListener('input', (e) => {
-                Settings.terrain.seaDepth = parseFloat(e.target.value);
+                Settings.terrain.seaDepth = parseFloat(e.target.value); if(this.elements.valTerrainDepth) this.elements.valTerrainDepth.innerText = e.target.value;
                 this.game.terrain.init();
             });
         }
         if (this.elements.waterOpacity) {
             this.elements.waterOpacity.addEventListener('input', (e) => {
-                Settings.water.opacity = parseFloat(e.target.value);
+                Settings.water.opacity = parseFloat(e.target.value); if(this.elements.valWaterOpacity) this.elements.valWaterOpacity.innerText = parseFloat(e.target.value).toFixed(2);
                 this.game.terrain.updateVisuals();
             });
         }
@@ -230,6 +237,14 @@ export class UIManager {
         if (this.elements.terrainTriangulate) this.elements.terrainTriangulate.checked = Settings.terrain.triangulated;
         if (this.elements.terrainDepth) this.elements.terrainDepth.value = Settings.terrain.seaDepth;
         if (this.elements.waterOpacity) this.elements.waterOpacity.value = Settings.water.opacity;
+
+        if (this.elements.valCameraDistance) this.elements.valCameraDistance.innerText = Settings.camera.distance;
+        if (this.elements.valCameraHeight) this.elements.valCameraHeight.innerText = Settings.camera.height;
+        if (this.elements.valCameraOffset) this.elements.valCameraOffset.innerText = Settings.camera.verticalOffset.toFixed(1);
+        if (this.elements.valTerrainSize) this.elements.valTerrainSize.innerText = Settings.terrain.size;
+        if (this.elements.valTerrainQuality) this.elements.valTerrainQuality.innerText = Settings.terrain.quality;
+        if (this.elements.valTerrainDepth) this.elements.valTerrainDepth.innerText = Settings.terrain.seaDepth;
+        if (this.elements.valWaterOpacity) this.elements.valWaterOpacity.innerText = Settings.water.opacity.toFixed(2);
 
         const manual = document.getElementById('manual-time-controls');
         if (manual) manual.style.display = Settings.time.useRealTime ? 'none' : 'block';

@@ -41,19 +41,19 @@ export class Terrain {
         const vertices = floorGeometry.attributes.position.array;
 
         const maxRadius = floorSize / 2;
-        const dropStart = maxRadius * 0.8;
+        const dropStart = maxRadius * 0.95;
 
         for (let i = 0; i < vertices.length; i += 3) {
             const x = vertices[i];
             const y = vertices[i + 1];
 
             const dist = Math.sqrt(x * x + y * y);
-            const islandRadius = size * 0.8;
+            const islandRadius = size * 1.5;
 
             let height = 0;
 
-            if (dist < islandRadius * 3) {
-                const edgeFactor = Math.pow(Math.max(0, 1 - dist / (islandRadius * 2)), 2.0);
+            if (dist < islandRadius * 4) {
+                const edgeFactor = Math.pow(Math.max(0, 1 - dist / (islandRadius * 3.5)), 2.0);
                 height = (Math.sin(x * 0.15) + Math.cos(y * 0.15)) * 2.5;
                 height += (Math.sin(x * 0.4) * Math.cos(y * 0.4)) * 1.5;
                 height = (height * edgeFactor) + (1 - edgeFactor) * seaDepth;

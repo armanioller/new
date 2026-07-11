@@ -34,8 +34,8 @@ export const Settings = {
         friction: 8
     },
     terrain: {
-        size: 80,
-        quality: 60,
+        size: 60,
+        quality: 50,
         triangulated: true,
         waterLevel: 0,
         grassLevel: 1.2,
@@ -52,9 +52,9 @@ export const Settings = {
         opacity: 0.6 // Default transparency
     },
     resources: {
-        maxTrees: 50,
-        maxRocks: 30,
-        spawnRadius: 35,
+        maxTrees: 80,
+        maxRocks: 50,
+        spawnRadius: 55,
         minSpawnHeight: 1.2
     },
     buildings: {

@@ -109,15 +109,15 @@
                             </select>
                         </div>
                         <div class="setting-row vertical">
-                            <label>Distância</label>
+                            <label>Distância: <span id="val-camera-distance"></span></label>
                             <input type="range" id="camera-distance" min="5" max="40" step="1" value="15">
                         </div>
                         <div class="setting-row vertical">
-                            <label>Altura</label>
+                            <label>Altura: <span id="val-camera-height"></span></label>
                             <input type="range" id="camera-height" min="2" max="30" step="1" value="12">
                         </div>
                         <div class="setting-row vertical">
-                            <label>Deslocamento Vertical</label>
+                            <label>Deslocamento: <span id="val-camera-offset"></span></label>
                             <input type="range" id="camera-offset" min="-5" max="10" step="0.1" value="1.5">
                         </div>
                     </div>
@@ -138,8 +138,8 @@
                 <div id="tab-terreno" class="tab-content">
                     <div class="settings-group">
                         <h3>Geometria</h3>
-                        <div class="setting-row vertical"><label>Tamanho</label><input type="range" id="terrain-size" min="10" max="100" step="1" value="50"></div>
-                        <div class="setting-row vertical"><label>Subdivisões</label><input type="range" id="terrain-quality" min="10" max="100" step="1" value="40"></div>
+                        <div class="setting-row vertical"><label>Tamanho: <span id="val-terrain-size"></span></label><input type="range" id="terrain-size" min="10" max="100" step="1" value="50"></div>
+                        <div class="setting-row vertical"><label>Subdivisões: <span id="val-terrain-quality"></span></label><input type="range" id="terrain-quality" min="10" max="100" step="1" value="40"></div>
                         <div class="setting-row">
                             <label class="switch"><input type="checkbox" id="terrain-triangulate" checked><span class="slider round"></span></label>
                             <span>Estilo Low-Poly</span>
@@ -148,11 +148,11 @@
                     <div class="settings-group">
                         <h3>Mar e Água</h3>
                         <div class="setting-row vertical">
-                            <label>Profundidade do Mar</label>
+                            <label>Profundidade: <span id="val-terrain-depth"></span></label>
                             <input type="range" id="terrain-depth" min="-40" max="-1" step="1" value="-10">
                         </div>
                         <div class="setting-row vertical">
-                            <label>Transparência da Água</label>
+                            <label>Opacidade: <span id="val-water-opacity"></span></label>
                             <input type="range" id="water-opacity" min="0" max="1" step="0.05" value="0.6">
                         </div>
                     </div>

@@ -4,14 +4,14 @@ export class UIManager {
     constructor(game) {
         this.game = game;
         this.elements = {
-            settingsToggle: document.querySelector('.ui-icon-button'),
-            settingsMenu: document.querySelector('.sidebar'),
+            settingsToggle: document.getElementById('settings-toggle'),
+            settingsMenu: document.getElementById('settings-menu'),
             tabButtons: document.querySelectorAll('.tab-btn'),
             tabContents: document.querySelectorAll('.tab-content'),
             timeDisplay: document.getElementById('time-display'),
             // Controls
-            realTimeToggle: document.getElementById('time-realtime'),
-            timeFreezeToggle: document.getElementById('time-freeze'),
+            realTimeToggle: document.getElementById('real-time-toggle'),
+            timeFreezeToggle: document.getElementById('time-freeze-toggle'),
             timeSlider: document.getElementById('time-slider'),
             timeSpeed: document.getElementById('time-speed'),
             cameraMode: document.getElementById('camera-mode'),
@@ -48,10 +48,12 @@ export class UIManager {
     }
 
     init() {
-        this.elements.settingsToggle.addEventListener('click', () => {
-            const isOpen = this.elements.settingsMenu.classList.toggle('open');
-            this.elements.settingsToggle.classList.toggle('sidebar-open', isOpen);
-        });
+        if (this.elements.settingsToggle) {
+            this.elements.settingsToggle.addEventListener('click', () => {
+                const isOpen = this.elements.settingsMenu.classList.toggle('open');
+                this.elements.settingsToggle.classList.toggle('sidebar-open', isOpen);
+            });
+        }
 
         this.elements.tabButtons.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -64,92 +66,125 @@ export class UIManager {
         });
 
         // Time
-        this.elements.realTimeToggle.addEventListener('change', (e) => {
-            Settings.time.useRealTime = e.target.checked;
-            const manual = document.getElementById('manual-time-controls');
-            if (manual) manual.style.display = e.target.checked ? 'none' : 'block';
-        });
-        this.elements.timeFreezeToggle.addEventListener('change', (e) => Settings.time.frozen = e.target.checked);
-        this.elements.timeSlider.addEventListener('input', (e) => Settings.time.timeOfDay = parseFloat(e.target.value));
-        this.elements.timeSpeed.addEventListener('input', (e) => Settings.time.timeSpeed = parseFloat(e.target.value));
+        if (this.elements.realTimeToggle) {
+            this.elements.realTimeToggle.addEventListener('change', (e) => {
+                Settings.time.useRealTime = e.target.checked;
+                const manual = document.getElementById('manual-time-controls');
+                if (manual) manual.style.display = e.target.checked ? 'none' : 'block';
+            });
+        }
+        if (this.elements.timeFreezeToggle) {
+            this.elements.timeFreezeToggle.addEventListener('change', (e) => Settings.time.frozen = e.target.checked);
+        }
+        if (this.elements.timeSlider) {
+            this.elements.timeSlider.addEventListener('input', (e) => Settings.time.timeOfDay = parseFloat(e.target.value));
+        }
+        if (this.elements.timeSpeed) {
+            this.elements.timeSpeed.addEventListener('input', (e) => Settings.time.timeSpeed = parseFloat(e.target.value));
+        }
 
         // Camera
-        this.elements.cameraMode.addEventListener('change', (e) => {
-            Settings.camera.mode = e.target.value;
-            if (e.target.value === 'firstperson') {
-                this.game.engine.renderer.domElement.requestPointerLock();
-            } else if (document.pointerLockElement) {
-                document.exitPointerLock();
-            }
-        });
-        this.elements.cameraDistance.addEventListener('input', (e) => Settings.camera.distance = parseFloat(e.target.value));
-        this.elements.cameraHeight.addEventListener('input', (e) => Settings.camera.height = parseFloat(e.target.value));
-        this.elements.cameraOffset.addEventListener('input', (e) => Settings.camera.verticalOffset = parseFloat(e.target.value));
+        if (this.elements.cameraMode) {
+            this.elements.cameraMode.addEventListener('change', (e) => {
+                Settings.camera.mode = e.target.value;
+                if (e.target.value === 'firstperson') {
+                    this.game.engine.renderer.domElement.requestPointerLock();
+                } else if (document.pointerLockElement) {
+                    document.exitPointerLock();
+                }
+            });
+        }
+        if (this.elements.cameraDistance) {
+            this.elements.cameraDistance.addEventListener('input', (e) => Settings.camera.distance = parseFloat(e.target.value));
+        }
+        if (this.elements.cameraHeight) {
+            this.elements.cameraHeight.addEventListener('input', (e) => Settings.camera.height = parseFloat(e.target.value));
+        }
+        if (this.elements.cameraOffset) {
+            this.elements.cameraOffset.addEventListener('input', (e) => Settings.camera.verticalOffset = parseFloat(e.target.value));
+        }
 
         // Terrain
-        this.elements.terrainSize.addEventListener('change', (e) => {
-            Settings.terrain.size = parseInt(e.target.value);
-            this.game.terrain.init();
-        });
-        this.elements.terrainQuality.addEventListener('change', (e) => {
-            Settings.terrain.quality = parseInt(e.target.value);
-            this.game.terrain.init();
-        });
-        this.elements.terrainTriangulate.addEventListener('change', (e) => {
-            Settings.terrain.triangulated = e.target.checked;
-            this.game.terrain.updateVisuals();
-        });
-        this.elements.terrainDepth.addEventListener('input', (e) => {
-            Settings.terrain.seaDepth = parseFloat(e.target.value);
-            this.game.terrain.init();
-        });
-        this.elements.waterOpacity.addEventListener('input', (e) => {
-            Settings.water.opacity = parseFloat(e.target.value);
-            this.game.terrain.updateVisuals();
-        });
+        if (this.elements.terrainSize) {
+            this.elements.terrainSize.addEventListener('change', (e) => {
+                Settings.terrain.size = parseInt(e.target.value);
+                this.game.terrain.init();
+            });
+        }
+        if (this.elements.terrainQuality) {
+            this.elements.terrainQuality.addEventListener('change', (e) => {
+                Settings.terrain.quality = parseInt(e.target.value);
+                this.game.terrain.init();
+            });
+        }
+        if (this.elements.terrainTriangulate) {
+            this.elements.terrainTriangulate.addEventListener('change', (e) => {
+                Settings.terrain.triangulated = e.target.checked;
+                this.game.terrain.updateVisuals();
+            });
+        }
+        if (this.elements.terrainDepth) {
+            this.elements.terrainDepth.addEventListener('input', (e) => {
+                Settings.terrain.seaDepth = parseFloat(e.target.value);
+                this.game.terrain.init();
+            });
+        }
+        if (this.elements.waterOpacity) {
+            this.elements.waterOpacity.addEventListener('input', (e) => {
+                Settings.water.opacity = parseFloat(e.target.value);
+                this.game.terrain.updateVisuals();
+            });
+        }
 
         // Colors
         const updateColor = (category, key, e) => {
             Settings[category].colors[key].set(e.target.value);
             if (category === 'terrain') this.game.terrain.updateVisuals();
         };
-        this.elements.colorMidnight.addEventListener('input', (e) => updateColor('time', 'midnight', e));
-        this.elements.colorDawn.addEventListener('input', (e) => updateColor('time', 'dawn', e));
-        this.elements.colorNoon.addEventListener('input', (e) => updateColor('time', 'noon', e));
-        this.elements.colorSunset.addEventListener('input', (e) => updateColor('time', 'sunset', e));
-        this.elements.colorSea.addEventListener('input', (e) => updateColor('terrain', 'sea', e));
-        this.elements.colorDirt.addEventListener('input', (e) => updateColor('terrain', 'dirt', e));
-        this.elements.colorGrass.addEventListener('input', (e) => updateColor('terrain', 'grass', e));
+        if (this.elements.colorMidnight) this.elements.colorMidnight.addEventListener('input', (e) => updateColor('time', 'midnight', e));
+        if (this.elements.colorDawn) this.elements.colorDawn.addEventListener('input', (e) => updateColor('time', 'dawn', e));
+        if (this.elements.colorNoon) this.elements.colorNoon.addEventListener('input', (e) => updateColor('time', 'noon', e));
+        if (this.elements.colorSunset) this.elements.colorSunset.addEventListener('input', (e) => updateColor('time', 'sunset', e));
+        if (this.elements.colorSea) this.elements.colorSea.addEventListener('input', (e) => updateColor('terrain', 'sea', e));
+        if (this.elements.colorDirt) this.elements.colorDirt.addEventListener('input', (e) => updateColor('terrain', 'dirt', e));
+        if (this.elements.colorGrass) this.elements.colorGrass.addEventListener('input', (e) => updateColor('terrain', 'grass', e));
 
         // Presets
-        this.elements.btnSavePreset.addEventListener('click', () => {
-            this.showModal("Santuário", "Deseja salvar suas configurações atuais?", () => {
-                localStorage.setItem('rpg_medieval_save', JSON.stringify(this.getPreset()));
-            });
-        });
-
-        this.elements.btnLoadPreset.addEventListener('click', () => {
-            const data = localStorage.getItem('rpg_medieval_save');
-            if (data) {
-                this.showModal("Restaurar", "Carregar progresso salvo?", () => {
-                    this.applyPreset(JSON.parse(data));
+        if (this.elements.btnSavePreset) {
+            this.elements.btnSavePreset.addEventListener('click', () => {
+                this.showModal("Santuário", "Deseja salvar suas configurações atuais?", () => {
+                    localStorage.setItem('rpg_medieval_save', JSON.stringify(this.getPreset()));
                 });
-            } else {
-                this.showModal("Erro", "Nenhum dado salvo encontrado.", null, false);
-            }
-        });
-
-        this.elements.btnResetDefaults.addEventListener('click', () => {
-            this.showModal("Reiniciar", "Todas as configurações e progresso serão perdidos. Confirmar?", () => {
-                localStorage.removeItem('rpg_medieval_save');
-                location.reload();
             });
-        });
+        }
+
+        if (this.elements.btnLoadPreset) {
+            this.elements.btnLoadPreset.addEventListener('click', () => {
+                const data = localStorage.getItem('rpg_medieval_save');
+                if (data) {
+                    this.showModal("Restaurar", "Carregar progresso salvo?", () => {
+                        this.applyPreset(JSON.parse(data));
+                    });
+                } else {
+                    this.showModal("Erro", "Nenhum dado salvo encontrado.", null, false);
+                }
+            });
+        }
+
+        if (this.elements.btnResetDefaults) {
+            this.elements.btnResetDefaults.addEventListener('click', () => {
+                this.showModal("Reiniciar", "Todas as configurações e progresso serão perdidos. Confirmar?", () => {
+                    localStorage.removeItem('rpg_medieval_save');
+                    location.reload();
+                });
+            });
+        }
 
         this.syncUI();
     }
 
     showModal(title, message, onConfirm = null, showCancel = true) {
+        if (!this.elements.modal) return;
         this.elements.modalTitle.innerText = title;
         this.elements.modalMessage.innerText = message;
         this.elements.modalCancel.style.display = showCancel ? 'block' : 'none';
@@ -184,24 +219,24 @@ export class UIManager {
     }
 
     syncUI() {
-        this.elements.realTimeToggle.checked = Settings.time.useRealTime;
-        this.elements.timeSlider.value = Settings.time.timeOfDay;
-        this.elements.cameraMode.value = Settings.camera.mode;
-        this.elements.cameraDistance.value = Settings.camera.distance;
-        this.elements.cameraHeight.value = Settings.camera.height;
-        this.elements.cameraOffset.value = Settings.camera.verticalOffset;
-        this.elements.terrainSize.value = Settings.terrain.size;
-        this.elements.terrainQuality.value = Settings.terrain.quality;
-        this.elements.terrainTriangulate.checked = Settings.terrain.triangulated;
-        this.elements.terrainDepth.value = Settings.terrain.seaDepth;
-        this.elements.waterOpacity.value = Settings.water.opacity;
+        if (this.elements.realTimeToggle) this.elements.realTimeToggle.checked = Settings.time.useRealTime;
+        if (this.elements.timeSlider) this.elements.timeSlider.value = Settings.time.timeOfDay;
+        if (this.elements.cameraMode) this.elements.cameraMode.value = Settings.camera.mode;
+        if (this.elements.cameraDistance) this.elements.cameraDistance.value = Settings.camera.distance;
+        if (this.elements.cameraHeight) this.elements.cameraHeight.value = Settings.camera.height;
+        if (this.elements.cameraOffset) this.elements.cameraOffset.value = Settings.camera.verticalOffset;
+        if (this.elements.terrainSize) this.elements.terrainSize.value = Settings.terrain.size;
+        if (this.elements.terrainQuality) this.elements.terrainQuality.value = Settings.terrain.quality;
+        if (this.elements.terrainTriangulate) this.elements.terrainTriangulate.checked = Settings.terrain.triangulated;
+        if (this.elements.terrainDepth) this.elements.terrainDepth.value = Settings.terrain.seaDepth;
+        if (this.elements.waterOpacity) this.elements.waterOpacity.value = Settings.water.opacity;
 
         const manual = document.getElementById('manual-time-controls');
         if (manual) manual.style.display = Settings.time.useRealTime ? 'none' : 'block';
 
-        this.elements.colorSea.value = '#' + Settings.terrain.colors.sea.getHexString();
-        this.elements.colorDirt.value = '#' + Settings.terrain.colors.dirt.getHexString();
-        this.elements.colorGrass.value = '#' + Settings.terrain.colors.grass.getHexString();
+        if (this.elements.colorSea) this.elements.colorSea.value = '#' + Settings.terrain.colors.sea.getHexString();
+        if (this.elements.colorDirt) this.elements.colorDirt.value = '#' + Settings.terrain.colors.dirt.getHexString();
+        if (this.elements.colorGrass) this.elements.colorGrass.value = '#' + Settings.terrain.colors.grass.getHexString();
     }
 
     update() {
@@ -211,9 +246,9 @@ export class UIManager {
 
         const h = Math.floor(Settings.time.timeOfDay);
         const m = Math.floor((Settings.time.timeOfDay % 1) * 60);
-        this.elements.timeDisplay.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        if (this.elements.timeDisplay) this.elements.timeDisplay.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 
-        if (!this.game.engine.isInteractingWithUI) {
+        if (!this.game.engine.isInteractingWithUI && this.elements.timeSlider) {
              this.elements.timeSlider.value = Settings.time.timeOfDay;
         }
     }

@@ -102,13 +102,13 @@ export class UIManager {
             });
         }
         if (this.elements.cameraDistance) {
-            this.elements.cameraDistance.addEventListener('input', (e) => Settings.camera.distance = parseFloat(e.target.value); if(this.elements.valCameraDistance) this.elements.valCameraDistance.innerText = e.target.value);
+            this.elements.cameraDistance.addEventListener('input', (e) => { Settings.camera.distance = parseFloat(e.target.value); if(this.elements.valCameraDistance) this.elements.valCameraDistance.innerText = e.target.value; });
         }
         if (this.elements.cameraHeight) {
-            this.elements.cameraHeight.addEventListener('input', (e) => Settings.camera.height = parseFloat(e.target.value); if(this.elements.valCameraHeight) this.elements.valCameraHeight.innerText = e.target.value);
+            this.elements.cameraHeight.addEventListener('input', (e) => { Settings.camera.height = parseFloat(e.target.value); if(this.elements.valCameraHeight) this.elements.valCameraHeight.innerText = e.target.value; });
         }
         if (this.elements.cameraOffset) {
-            this.elements.cameraOffset.addEventListener('input', (e) => Settings.camera.verticalOffset = parseFloat(e.target.value); if(this.elements.valCameraOffset) this.elements.valCameraOffset.innerText = parseFloat(e.target.value).toFixed(1));
+            this.elements.cameraOffset.addEventListener('input', (e) => { Settings.camera.verticalOffset = parseFloat(e.target.value); if(this.elements.valCameraOffset) this.elements.valCameraOffset.innerText = parseFloat(e.target.value).toFixed(1); });
         }
 
         // Terrain

@@ -4,6 +4,7 @@ import { EnvironmentManager } from './systems/EnvironmentManager.js';
 import { Terrain } from './world/Terrain.js';
 import { Player } from './entities/Player.js';
 import { UIManager } from './ui/UIManager.js';
+import { MinimapManager } from './systems/MinimapManager.js';
 import { Settings } from './core/Settings.js';
 import * as THREE from 'three';
 
@@ -16,6 +17,7 @@ class Game {
         this.player = new Player(this.engine.scene, this.terrain);
 
         this.ui = new UIManager(this);
+        this.minimap = new MinimapManager(this);
 
         this.animate();
         window.game = this;
@@ -49,6 +51,7 @@ class Game {
         this.player.update(delta, this.cameraManager.camera);
         this.cameraManager.update(delta, this.player);
         this.ui.update();
+        this.minimap.update(time);
 
         this.engine.render(this.cameraManager.camera);
     }

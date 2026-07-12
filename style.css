@@ -233,3 +233,65 @@ input:checked + .slider { background-color: rgba(212,175,55,0.1); border-color: 
 input:checked + .slider:before { transform: translateX(20px); background-color: var(--gold); }
 .slider.round { border-radius: 20px; }
 .slider.round:before { border-radius: 50%; }
+
+/* MINIMAP */
+#minimap-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 180px;
+    height: 180px;
+    padding: 5px;
+    background: rgba(0,0,0,0.6);
+    border: 2px solid var(--gold);
+    border-radius: 50%;
+    overflow: visible;
+    box-shadow: 0 0 20px rgba(0,0,0,0.8), inset 0 0 15px rgba(212,175,55,0.2);
+    z-index: 100;
+    pointer-events: none;
+}
+
+.minimap-frame {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #050505;
+}
+
+#minimap-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+#minimap-player-marker {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    background: #ffff00;
+    border-top: 4px solid #fff;
+    border: 2px solid #000;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 5px #ffff00;
+    z-index: 105;
+}
+
+.compass-marker {
+    position: absolute;
+    font-family: 'Cinzel', serif;
+    color: var(--gold);
+    font-size: 0.7em;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px #000;
+    z-index: 110;
+}
+
+.compass-marker.N { top: 2px; left: 50%; transform: translateX(-50%); }
+.compass-marker.S { bottom: 2px; left: 50%; transform: translateX(-50%); }
+.compass-marker.E { right: 5px; top: 50%; transform: translateY(-50%); }
+.compass-marker.W { left: 5px; top: 50%; transform: translateY(-50%); }

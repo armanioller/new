@@ -1,35 +1,20 @@
 import { test, expect } from '@playwright/test';
 
-test('Frontend Verification - Horizon and Waves', async ({ page }) => {
-  await page.goto('http://localhost:5173');
-  await page.waitForTimeout(2000);
+test('verify minimap and terrain visuals', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto('http://localhost:5173');
 
-  // 1. Noon Horizon
-  await page.evaluate(() => {
-    window.Settings.time.frozen = true;
-    window.Settings.time.timeOfDay = 12;
-  });
-  await page.waitForTimeout(1000);
-  await page.screenshot({ path: 'screenshots/verify-horizon-noon.png' });
+    // Wait for the minimap to render its first frame (2 seconds delay in init + interval)
+    await page.waitForTimeout(6000);
 
-  // 2. Sunset Horizon
-  await page.evaluate(() => {
-    window.Settings.time.timeOfDay = 18;
-  });
-  await page.waitForTimeout(1000);
-  await page.screenshot({ path: 'screenshots/verify-horizon-sunset.png' });
+    // Screenshot of the whole UI
+    await page.screenshot({ path: 'screenshots/verify-minimap-final.png' });
 
-  // 3. Midnight Horizon
-  await page.evaluate(() => {
-    window.Settings.time.timeOfDay = 0;
-  });
-  await page.waitForTimeout(1000);
-  await page.screenshot({ path: 'screenshots/verify-horizon-midnight.png' });
+    // Verify minimap container visibility
+    const minimap = page.locator('#minimap-container');
+    await expect(minimap).toBeVisible();
 
-  // 4. Verify UI Tab "Sistema" (previously broken)
-  await page.click('#settings-toggle');
-  await page.waitForTimeout(500);
-  await page.click('button[data-tab="tab-presets"]');
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: 'screenshots/verify-ui-sistema.png' });
+    // Check if player marker exists
+    const marker = page.locator('#minimap-player-marker');
+    await expect(marker).toBeVisible();
 });

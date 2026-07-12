@@ -13,17 +13,21 @@ export class MinimapManager {
 
         // Render Target for terrain capture
         this.renderTarget = new THREE.WebGLRenderTarget(512, 512);
-        this.minimapCamera = new THREE.OrthographicCamera(-500, 500, 500, -500, 1, 2000);
-        this.minimapCamera.position.set(0, 1000, 0);
-        this.minimapCamera.lookAt(0, 0, 0);
-        this.minimapCamera.up.set(0, 0, -1); // North is up (-Z)
 
-        // Temporary light for clear map rendering
+        // Camera looking down from above.
+        // North is -Z (Top), East is +X (Right)
+        this.minimapCamera = new THREE.OrthographicCamera(-500, 500, 500, -500, 1, 5000);
+        this.minimapCamera.position.set(0, 3000, 0);
+        this.minimapCamera.lookAt(0, 0, 0);
+        this.minimapCamera.up.set(0, 0, -1); // North (-Z) is UP in the camera view
+
+        // Temporary lights for clear map rendering
         this.mapLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        this.mapLight.position.set(0, 1000, 0);
+        this.mapLight.position.set(100, 1000, 100);
+        this.mapAmbient = new THREE.AmbientLight(0xffffff, 0.8);
 
         this.lastRenderTime = 0;
-        this.renderInterval = 5000; // Render terrain every 5 seconds
+        this.renderInterval = 10000; // Render terrain every 5 seconds
 
         this.init();
     }
@@ -34,7 +38,7 @@ export class MinimapManager {
         this.canvas.height = size;
 
         // Initial delay to let world load
-        setTimeout(() => this.renderTerrain(), 1000);
+        setTimeout(() => this.renderTerrain(), 2000);
     }
 
     renderTerrain() {
@@ -49,11 +53,17 @@ export class MinimapManager {
         const oldSkyVisible = skydome ? skydome.visible : true;
         if (skydome) skydome.visible = false;
 
+        const water = this.scene.getObjectByName("water");
+        const oldWaterVisible = water ? water.visible : true;
+
         // Temporarily add strong light from top
         this.scene.add(this.mapLight);
+        this.scene.add(this.mapAmbient);
 
         const worldSize = Settings.terrain.size * 15;
         const halfSize = worldSize / 2;
+
+        // Match camera to world size
         this.minimapCamera.left = -halfSize;
         this.minimapCamera.right = halfSize;
         this.minimapCamera.top = halfSize;
@@ -86,6 +96,9 @@ export class MinimapManager {
         this.ctx.arc(this.canvas.width/2, this.canvas.height/2, this.canvas.width/2, 0, Math.PI*2);
         this.ctx.clip();
 
+        // Note: readRenderTargetPixels returns pixels from bottom-to-top.
+        // But our camera up is (0,0,-1), so we might need careful flipping.
+        // Actually, let's just draw it and see.
         this.ctx.translate(0, this.canvas.height);
         this.ctx.scale(1, -1);
         this.ctx.drawImage(tempCanvas, 0, 0, 512, 512, 0, 0, this.canvas.width, this.canvas.height);
@@ -93,6 +106,7 @@ export class MinimapManager {
 
         // Cleanup
         this.scene.remove(this.mapLight);
+        this.scene.remove(this.mapAmbient);
         this.scene.fog = oldFog;
         if (skydome) skydome.visible = oldSkyVisible;
     }
@@ -106,6 +120,9 @@ export class MinimapManager {
         const playerPos = this.game.player.group.position;
         const worldSize = Settings.terrain.size * 15;
 
+        // Center of map is (0,0).
+        // X: -halfSize to +halfSize maps to 0 to 1
+        // Z: -halfSize to +halfSize maps to 0 to 1
         const pctX = (playerPos.x / worldSize) + 0.5;
         const pctZ = (playerPos.z / worldSize) + 0.5;
 
@@ -114,8 +131,13 @@ export class MinimapManager {
             this.playerMarker.style.top = `${pctZ * 100}%`;
 
             // Marker facing direction
-            const rot = -this.game.player.group.rotation.y;
-            this.playerMarker.style.transform = `translate(-50%, -50%) rotate(${rot}rad)`;
+            // In Three.js, rot 0 is +Z usually, but our model might vary.
+            // Based on Player.js: this.physicalRotation = Math.atan2(moveVec.x, moveVec.z);
+            // If moveVec is (0,0,1), rot is 0. Marker should point South (+Z).
+            // CSS rotate(0deg) is usually pointing UP (which we want to be North).
+            // So if rot is 0 (+Z), we want 180deg.
+            const rotDeg = -(this.game.player.group.rotation.y * 180 / Math.PI) + 180;
+            this.playerMarker.style.transform = `translate(-50%, -50%) rotate(${rotDeg}deg)`;
         }
     }
 }

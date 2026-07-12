@@ -122,7 +122,7 @@ export class Player {
 
             // Movement Boundary: Prevent walking off the island mesh entirely
             const distFromCenter = Math.sqrt(nextPos.x * nextPos.x + nextPos.z * nextPos.z);
-            const maxBound = Settings.terrain.size * 1.1; // Stay within visible mesh
+            const maxBound = Settings.terrain.size * 7.2; // Stay within visible mesh
 
             if (distFromCenter < maxBound) {
                 this.group.position.copy(nextPos);

@@ -112,7 +112,7 @@ export class Terrain {
 
         const floorSize = Settings.terrain.size * 15;
         const maxRadius = floorSize / 2;
-        const fadeStart = maxRadius * 0.5;
+        const fadeStart = maxRadius * 0.8;
 
         for (let i = 0, j = 0; i < vertices.length; i += 3, j += 3) {
             const vx = vertices[i];

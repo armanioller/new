@@ -35,6 +35,47 @@ class Game {
         }
     }
 
+    handleUnderwaterEffects(skyColor) {
+        const camY = this.cameraManager.camera.position.y;
+        const waterY = Settings.terrain.waterLevel;
+        const fog = this.engine.scene.fog;
+
+        if (camY < waterY) {
+            // UNDERWATER
+            const depth = Math.abs(camY - waterY);
+            const murkyFactor = Math.min(1, depth / 20);
+
+            // Murky green/blue color
+            const murkyColor = new THREE.Color(0x001a1a).lerp(new THREE.Color(0x000505), murkyFactor);
+
+            if (fog) {
+                fog.color.copy(murkyColor);
+                // Thick fog to hide sky/stars
+                fog.density = 0.15 + (murkyFactor * 0.1);
+            }
+
+            // Hide stars if very deep
+            if (this.environment.stars) {
+                this.environment.stars.visible = false;
+            }
+
+            this.engine.scene.background = murkyColor;
+
+            const skydome = this.engine.scene.getObjectByName("skydome");
+            if (skydome) skydome.material.color.copy(murkyColor);
+
+        } else {
+            // ABOVE WATER
+            if (fog) {
+                fog.color.copy(skyColor);
+                const angle = ((Settings.time.timeOfDay - 6) / 24) * Math.PI * 2;
+                const dayFactor = Math.max(0, Math.sin(angle));
+                fog.density = 0.0025 + (1 - dayFactor) * 0.0015;
+            }
+            // Stars visibility is handled by EnvironmentManager
+        }
+    }
+
     animate() {
         requestAnimationFrame(() => this.animate());
 
@@ -42,14 +83,16 @@ class Game {
         const time = this.engine.clock.getElapsedTime() * 1000;
 
         this.updateTime();
-        const currentSkyColor = this.environment.update(Settings.time.timeOfDay);
-
-        // SYNC TERRAIN FADING WITH SKY COLOR
-        this.terrain.updateVisuals(currentSkyColor);
-        this.terrain.updateWater(time);
+        const currentSkyColor = this.environment.update(Settings.time.timeOfDay, this.cameraManager.camera.position);
 
         this.player.update(delta, this.cameraManager.camera);
         this.cameraManager.update(delta, this.player);
+
+        // SYNC TERRAIN FADING WITH SKY/FOG COLOR
+        this.handleUnderwaterEffects(currentSkyColor);
+        this.terrain.updateVisuals(this.engine.scene.fog.color);
+        this.terrain.updateWater(time);
+
         this.ui.update();
         this.minimap.update(time);
 

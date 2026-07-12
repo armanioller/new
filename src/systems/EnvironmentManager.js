@@ -29,14 +29,15 @@ export class EnvironmentManager {
     }
 
     initStars() {
-        const starCount = 4000;
+        const starCount = 8000; // Increased count
         const positions = new Float32Array(starCount * 3);
         const sizes = new Float32Array(starCount);
         const twinkleSeeds = new Float32Array(starCount);
 
         for (let i = 0; i < starCount; i++) {
             const i3 = i * 3;
-            const r = 7000 + Math.random() * 2000;
+            // Spread stars in a sphere
+            const r = 8000 + Math.random() * 1000;
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.acos(2 * Math.random() - 1);
 
@@ -44,7 +45,7 @@ export class EnvironmentManager {
             positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
             positions[i3 + 2] = r * Math.cos(phi);
 
-            sizes[i] = 1.0 + Math.random() * 3.0;
+            sizes[i] = 1.5 + Math.random() * 4.0;
             twinkleSeeds[i] = Math.random() * 10.0;
         }
 
@@ -82,7 +83,6 @@ export class EnvironmentManager {
                 float dist = distance(gl_PointCoord, vec2(0.5));
                 if (dist > 0.5) discard;
 
-                // Twinkling effect: modulate brightness slightly
                 float brightness = 0.7 + vTwinkle * 0.3;
                 gl_FragColor = vec4(uColor, uOpacity * brightness);
             }
@@ -94,7 +94,8 @@ export class EnvironmentManager {
             fragmentShader: fragmentShader,
             transparent: true,
             depthWrite: false,
-            blending: THREE.AdditiveBlending
+            blending: THREE.AdditiveBlending,
+            fog: false // Stars NOT affected by fog
         });
 
         this.stars = new THREE.Points(geometry, this.starMaterial);
@@ -102,7 +103,7 @@ export class EnvironmentManager {
         this.scene.add(this.stars);
     }
 
-    update(timeOfDay) {
+    update(timeOfDay, cameraPos) {
         const angle = ((timeOfDay - 6) / 24) * Math.PI * 2;
 
         const sunDist = 1800;
@@ -129,15 +130,15 @@ export class EnvironmentManager {
         }
 
         this.scene.background = skyColor;
-        if (this.scene.fog) {
-            this.scene.fog.color.copy(skyColor);
-            const dayFactor = Math.max(0, Math.sin(angle));
-            this.scene.fog.density = 0.0025 + (1 - dayFactor) * 0.0015;
-        }
 
         const skydome = this.scene.getObjectByName("skydome");
         if (skydome) {
             skydome.material.color.copy(skyColor);
+            if (cameraPos) skydome.position.copy(cameraPos);
+        }
+
+        if (this.stars && cameraPos) {
+            this.stars.position.copy(cameraPos);
         }
 
         // UPDATE STARS OPACITY AND TIME

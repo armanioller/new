@@ -43,7 +43,8 @@ export const Settings = {
         colors: {
             sea: new THREE.Color(0x004466),
             dirt: new THREE.Color(0x5d4037),
-            grass: new THREE.Color(0x3e4e20)
+            grass: new THREE.Color(0x3e4e20),
+            underwater: new THREE.Color(0x000102)
         }
     },
     water: {

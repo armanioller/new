@@ -30,6 +30,7 @@ export class UIManager {
             colorSea: document.getElementById('color-sea'),
             colorDirt: document.getElementById('color-dirt'),
             colorGrass: document.getElementById('color-grass'),
+            colorUnderwater: document.getElementById('color-underwater'),
             btnSavePreset: document.getElementById('btn-save-preset'),
             btnLoadPreset: document.getElementById('btn-load-preset'),
             btnResetDefaults: document.getElementById('btn-reset-defaults'),
@@ -155,6 +156,7 @@ export class UIManager {
         if (this.elements.colorSea) this.elements.colorSea.addEventListener('input', (e) => updateColor('terrain', 'sea', e));
         if (this.elements.colorDirt) this.elements.colorDirt.addEventListener('input', (e) => updateColor('terrain', 'dirt', e));
         if (this.elements.colorGrass) this.elements.colorGrass.addEventListener('input', (e) => updateColor('terrain', 'grass', e));
+        if (this.elements.colorUnderwater) this.elements.colorUnderwater.addEventListener('input', (e) => updateColor('terrain', 'underwater', e));
 
         // Presets
         if (this.elements.btnSavePreset) {
@@ -252,6 +254,7 @@ export class UIManager {
         if (this.elements.colorSea) this.elements.colorSea.value = '#' + Settings.terrain.colors.sea.getHexString();
         if (this.elements.colorDirt) this.elements.colorDirt.value = '#' + Settings.terrain.colors.dirt.getHexString();
         if (this.elements.colorGrass) this.elements.colorGrass.value = '#' + Settings.terrain.colors.grass.getHexString();
+        if (this.elements.colorUnderwater) this.elements.colorUnderwater.value = '#' + Settings.terrain.colors.underwater.getHexString();
     }
 
     update() {

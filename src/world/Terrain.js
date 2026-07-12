@@ -23,7 +23,7 @@ export class Terrain {
         });
 
         this._tempColor = new THREE.Color();
-        this._depthColor = new THREE.Color(0x000102);
+        this._depthColor = Settings.terrain.colors.underwater;
 
         this.init();
     }
@@ -108,6 +108,7 @@ export class Terrain {
         const dirtColor = Settings.terrain.colors.dirt;
         const grassColor = Settings.terrain.colors.grass;
         const seaColor = Settings.terrain.colors.sea;
+        const underwaterColor = Settings.terrain.colors.underwater;
         const targetFogColor = fogColor || this._tempColor.set(0x87ceeb);
 
         const floorSize = Settings.terrain.size * 15;
@@ -122,7 +123,7 @@ export class Terrain {
             if (height < Settings.terrain.waterLevel + 0.3) {
                 const depth = Math.max(0, Settings.terrain.waterLevel - height);
                 const depthFactor = Math.min(1, depth / 15);
-                this._tempColor.copy(dirtColor).lerp(this._depthColor, depthFactor);
+                this._tempColor.copy(dirtColor).lerp(underwaterColor, depthFactor);
             } else if (height < Settings.terrain.grassLevel) {
                 this._tempColor.copy(dirtColor);
             } else {

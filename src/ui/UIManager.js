@@ -49,9 +49,12 @@ export class UIManager {
             valTerrainDepth: document.getElementById("val-terrain-depth"),
             valWaterOpacity: document.getElementById("val-water-opacity"),
             buildList: document.getElementById('build-list'),
-            // Character
+            // Character & Animations
             charPreviewContainer: document.getElementById('character-preview-container'),
             charModelUpload: document.getElementById('char-model-upload'),
+            animWalkUpload: document.getElementById('anim-walk-upload'),
+            animRunUpload: document.getElementById('anim-run-upload'),
+            animJumpUpload: document.getElementById('anim-jump-upload'),
             btnResetCharacter: document.getElementById('btn-reset-character'),
             // Modal
             modal: document.getElementById('global-modal'),
@@ -103,25 +106,36 @@ export class UIManager {
             });
         });
 
-        // Character Upload
-        if (this.elements.charModelUpload) {
-            this.elements.charModelUpload.addEventListener('change', (e) => {
+        // Animation and Model Uploads
+        const handleUpload = (element, callback) => {
+            if (!element) return;
+            element.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
                     const reader = new FileReader();
-                    reader.onload = (event) => {
-                        this.game.player.loadCustomModel(event.target.result, file.name);
-                        this.updatePreviewModel();
-                    };
+                    reader.onload = (event) => callback(event.target.result, file.name);
                     reader.readAsArrayBuffer(file);
+
+                    // Update label text
+                    const span = element.parentElement.querySelector('span');
+                    if (span) span.innerText = `✔️ ${file.name.substring(0, 15)}...`;
                 }
             });
-        }
+        };
+
+        handleUpload(this.elements.charModelUpload, (buffer, name) => {
+            this.game.player.loadCustomModel(buffer, name);
+            setTimeout(() => this.updatePreviewModel(), 500);
+        });
+
+        handleUpload(this.elements.animWalkUpload, (buffer, name) => this.game.player.loadCustomAnimation(buffer, name, 'walking'));
+        handleUpload(this.elements.animRunUpload, (buffer, name) => this.game.player.loadCustomAnimation(buffer, name, 'running'));
+        handleUpload(this.elements.animJumpUpload, (buffer, name) => this.game.player.loadCustomAnimation(buffer, name, 'jump'));
 
         if (this.elements.btnResetCharacter) {
             this.elements.btnResetCharacter.addEventListener('click', () => {
-                this.game.player.loadModel(); // Reload default
-                setTimeout(() => this.updatePreviewModel(), 500);
+                this.game.player.loadModel();
+                setTimeout(() => this.updatePreviewModel(), 1000);
             });
         }
 
@@ -260,14 +274,12 @@ export class UIManager {
                     Settings.resources.maxTrees = Math.floor(80 * config.resourceDensity);
                     Settings.resources.maxRocks = Math.floor(50 * config.resourceDensity);
 
-                    // Re-init systems
                     this.game.terrain.init();
                     if (this.game.environment.stars) {
                         this.game.engine.scene.remove(this.game.environment.stars);
                         this.game.environment.initStars();
                     }
 
-                    // Shadow resolution update (requires light recreation)
                     const sun = this.game.environment.sunLight;
                     sun.shadow.mapSize.set(config.shadowRes, config.shadowRes);
                     sun.shadow.map.dispose();
@@ -312,13 +324,11 @@ export class UIManager {
         };
         animate();
 
-        // Initial model
         setTimeout(() => this.updatePreviewModel(), 1000);
     }
 
     updatePreviewModel() {
         if (!this.game.player.model) return;
-
         if (this.preview.model) this.preview.scene.remove(this.preview.model);
 
         this.preview.model = this.game.player.model.clone();
@@ -326,7 +336,6 @@ export class UIManager {
         this.preview.model.scale.set(1, 1, 1);
         this.preview.scene.add(this.preview.model);
 
-        // Try to play idle animation in preview
         this.preview.mixer = new THREE.AnimationMixer(this.preview.model);
         const animations = this.game.player.rawAnimations;
         if (animations && animations.length > 0) {
@@ -379,7 +388,6 @@ export class UIManager {
         if (this.elements.cameraOffset) this.elements.cameraOffset.value = Settings.camera.verticalOffset;
         if (this.elements.terrainSize) this.elements.terrainSize.value = Settings.terrain.size;
         if (this.elements.terrainQuality) this.elements.terrainQuality.value = Settings.terrain.quality;
-        if (this.elements.terrainTriangulate) this.elements.terrainTriangulate.checked = Settings.terrain.triangulated;
         if (this.elements.terrainDepth) this.elements.terrainDepth.value = Settings.terrain.seaDepth;
         if (this.elements.waterOpacity) this.elements.waterOpacity.value = Settings.water.opacity;
         if (this.elements.graphicsQuality) this.elements.graphicsQuality.value = Settings.graphics.quality;

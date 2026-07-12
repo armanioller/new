@@ -33,7 +33,7 @@ export class MinimapManager {
     }
 
     init() {
-        const size = 180;
+        const size = 220;
         this.canvas.width = size;
         this.canvas.height = size;
 
@@ -92,9 +92,6 @@ export class MinimapManager {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
         // Circular mask
-        this.ctx.beginPath();
-        this.ctx.arc(this.canvas.width/2, this.canvas.height/2, this.canvas.width/2, 0, Math.PI*2);
-        this.ctx.clip();
 
         // Note: readRenderTargetPixels returns pixels from bottom-to-top.
         // But our camera up is (0,0,-1), so we might need careful flipping.

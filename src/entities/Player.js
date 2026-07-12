@@ -13,6 +13,7 @@ export class Player {
 
         this.model = null;
         this.rawAnimations = [];
+        this.customClips = {};
         this.physicalRotation = 0;
         this.inventory = { wood: 0, stone: 0 };
         this.keys = {};
@@ -25,7 +26,7 @@ export class Player {
         this.isJumping = false;
         this.jumpVelocity = 0;
         this.jumpHeight = 0;
-        this.gravity = 30;
+        this.gravity = 32;
 
         window.addEventListener('keydown', (e) => this.keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', (e) => this.keys[e.key.toLowerCase()] = false);
@@ -37,10 +38,10 @@ export class Player {
     initPlaceholder() {
         if (this.placeholder) this.group.remove(this.placeholder);
         this.placeholder = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 4, 8), new THREE.MeshStandardMaterial({ color: 0xcd7f32 }));
-        body.position.y = 0.9;
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshStandardMaterial({ color: 0xc0c0c0 }));
-        head.position.y = 1.6;
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.4), new THREE.MeshStandardMaterial({ color: 0xcd7f32 }));
+        body.position.y = 0.6;
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: 0xc0c0c0 }));
+        head.position.y = 1.45;
         this.placeholder.add(body, head);
         this.group.add(this.placeholder);
     }
@@ -57,18 +58,39 @@ export class Player {
         const blob = new Blob([buffer]);
         const url = URL.createObjectURL(blob);
 
+        const onLoaded = (object, animations) => {
+            this.setupModel(object, animations);
+            URL.revokeObjectURL(url);
+        };
+
         if (extension === 'glb' || extension === 'gltf') {
-            const loader = new GLTFLoader();
-            loader.load(url, (gltf) => {
-                this.setupModel(gltf.scene, gltf.animations);
-                URL.revokeObjectURL(url);
-            });
+            new GLTFLoader().load(url, (gltf) => onLoaded(gltf.scene, gltf.animations));
         } else if (extension === 'fbx') {
-            const loader = new FBXLoader();
-            loader.load(url, (object) => {
-                this.setupModel(object, object.animations);
-                URL.revokeObjectURL(url);
-            });
+            new FBXLoader().load(url, (object) => onLoaded(object, object.animations));
+        }
+    }
+
+    loadCustomAnimation(buffer, filename, type) {
+        const extension = filename.split('.').pop().toLowerCase();
+        const blob = new Blob([buffer]);
+        const url = URL.createObjectURL(blob);
+
+        const onLoaded = (animations) => {
+            if (animations && animations.length > 0) {
+                const clip = animations[0];
+                clip.name = type;
+                this.customClips[type] = clip;
+                if (this.mixer) {
+                    this.animations[type] = this.mixer.clipAction(clip);
+                }
+            }
+            URL.revokeObjectURL(url);
+        };
+
+        if (extension === 'glb' || extension === 'gltf') {
+            new GLTFLoader().load(url, (gltf) => onLoaded(gltf.animations));
+        } else if (extension === 'fbx') {
+            new FBXLoader().load(url, (object) => onLoaded(object.animations));
         }
     }
 
@@ -79,11 +101,10 @@ export class Player {
         this.model = model;
         this.rawAnimations = animations;
 
-        // Auto-scale model if too big/small
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 1.8 / maxDim; // Target ~1.8m height
+        const scale = 1.8 / maxDim;
         this.model.scale.set(scale, scale, scale);
 
         this.model.traverse(c => { if(c.isMesh) c.castShadow = true; });
@@ -94,25 +115,29 @@ export class Player {
 
         animations.forEach(clip => {
             const name = clip.name.toLowerCase();
-            this.animations[name] = this.mixer.clipAction(clip);
-
-            // Map common names
-            if (name.includes('idle')) this.animations['idle'] = this.animations[name];
-            if (name.includes('walk')) this.animations['walking'] = this.animations[name];
-            if (name.includes('run')) this.animations['running'] = this.animations[name];
-            if (name.includes('jump')) this.animations['jump'] = this.animations[name];
+            const action = this.mixer.clipAction(clip);
+            if (name.includes('idle')) this.animations['idle'] = action;
+            if (name.includes('walk')) this.animations['walking'] = action;
+            if (name.includes('run')) this.animations['running'] = action;
+            if (name.includes('jump')) this.animations['jump'] = action;
         });
 
-        // Fallbacks if mapping failed
+        Object.keys(this.customClips).forEach(type => {
+            this.animations[type] = this.mixer.clipAction(this.customClips[type]);
+        });
+
         if (!this.animations['idle'] && animations.length > 0) this.animations['idle'] = this.mixer.clipAction(animations[0]);
 
         this.fadeToAction('idle');
     }
 
-    fadeToAction(name, duration = 0.2) {
-        if (!this.animations[name]) return;
-        const nextAction = this.animations[name];
+    fadeToAction(name, duration = 0.15) {
+        if (!this.animations[name]) {
+            if (name === 'running' && this.animations['walking']) name = 'walking';
+            else return;
+        }
 
+        const nextAction = this.animations[name];
         if (this.currentAction === nextAction && nextAction.isRunning()) return;
 
         if (this.currentAction) {
@@ -121,8 +146,7 @@ export class Player {
 
         this.currentAction = nextAction;
 
-        const oneShots = ['punch', 'jump', 'thumbsup', 'no', 'wave', 'death'];
-        if (oneShots.includes(name) || name.includes('jump')) {
+        if (name === 'jump' || name.includes('jump')) {
             this.currentAction.setLoop(THREE.LoopOnce);
             this.currentAction.clampWhenFinished = true;
         } else {
@@ -141,15 +165,11 @@ export class Player {
         if (this.mixer) this.mixer.update(delta);
         if (Settings.camera.mode === 'free') return;
 
-        const currentAnimName = this.currentAction ? this.currentAction.getClip().name.toLowerCase() : '';
-        const isOneShot = ['punch', 'jump', 'thumbsup', 'no', 'wave'].some(n => currentAnimName.includes(n));
-        const isActionBusy = isOneShot && this.currentAction.isRunning() && this.currentAction.time < this.currentAction.getClip().duration * 0.8;
-
         const moveX = (this.keys.d ? 1 : 0) - (this.keys.a ? 1 : 0);
         const moveZ = (this.keys.s ? 1 : 0) - (this.keys.w ? 1 : 0);
         const isMoving = moveX !== 0 || moveZ !== 0;
-
         const isRunning = this.keys.shift;
+
         if (isMoving) {
             const camForward = new THREE.Vector3();
             camera.getWorldDirection(camForward);
@@ -171,17 +191,15 @@ export class Player {
 
             const nextPos = this.group.position.clone().addScaledVector(moveVec, speed);
             const distFromCenter = Math.sqrt(nextPos.x * nextPos.x + nextPos.z * nextPos.z);
-            const maxBound = Settings.terrain.size * 7.2;
-
-            if (distFromCenter < maxBound) {
+            if (distFromCenter < Settings.terrain.size * 7.5) {
                 this.group.position.copy(nextPos);
             }
 
-            if (!isActionBusy) {
+            if (!this.isJumping) {
                 this.fadeToAction(isRunning ? 'running' : 'walking');
             }
         } else {
-            if (!isActionBusy) {
+            if (!this.isJumping) {
                 this.fadeToAction('idle');
             }
             if (Settings.camera.mode === 'firstperson') {
@@ -193,7 +211,7 @@ export class Player {
 
         if (this.keys[' '] && !this.isJumping) {
             this.isJumping = true;
-            this.jumpVelocity = 10;
+            this.jumpVelocity = 11;
             this.fadeToAction('jump');
         }
 
@@ -203,19 +221,18 @@ export class Player {
             if (this.jumpHeight <= 0) {
                 this.jumpHeight = 0;
                 this.isJumping = false;
+                this.fadeToAction(isMoving ? (isRunning ? 'running' : 'walking') : 'idle');
             }
-        } else {
-            this.jumpHeight = 0;
         }
 
         let rotDiff = this.physicalRotation - this.group.rotation.y;
         rotDiff = Math.atan2(Math.sin(rotDiff), Math.cos(rotDiff));
-        this.group.rotation.y += rotDiff * Math.min(1.0, 3.5 * delta);
+        this.group.rotation.y += rotDiff * Math.min(1.0, 5 * delta);
 
-        const h = this.terrain.getHeight(this.group.position.x, this.group.position.z);
-        const targetY = h + this.jumpHeight;
+        const groundH = this.terrain.getHeight(this.group.position.x, this.group.position.z);
+        const targetY = groundH + this.jumpHeight;
 
-        if (h < Settings.terrain.waterLevel) {
+        if (groundH < Settings.terrain.waterLevel) {
              this.group.position.y = targetY;
         } else {
              this.group.position.y = THREE.MathUtils.lerp(this.group.position.y, targetY, 15 * delta);

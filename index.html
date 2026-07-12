@@ -21,6 +21,7 @@
     <canvas id="game-canvas"></canvas>
 
     <div id="ui-layer">
+        <div id="menu-overlay"></div>
         <div id="hud-top-left" class="hud-panel">
             <div class="hud-header">Mochila</div>
             <div class="resource-container">
@@ -41,7 +42,7 @@
 
         <button id="settings-toggle" class="ui-icon-button">⚙️</button>
 
-        <div id="settings-menu" class="sidebar">
+        <div id="settings-menu" class="central-menu-modal">
             <div class="sidebar-header">
                 <h2>Configurações</h2>
             </div>
@@ -50,6 +51,7 @@
                 <button class="tab-btn active" data-tab="tab-ambiente">Ambiente</button>
                 <button class="tab-btn" data-tab="tab-camera">Câmera</button>
                 <button class="tab-btn" data-tab="tab-construcao">Construção</button>
+                <button class="tab-btn" data-tab="tab-personagem">Personagem</button>
                 <button class="tab-btn" data-tab="tab-terreno">Terreno</button>
                 <button class="tab-btn" data-tab="tab-presets">Sistema</button>
             </div>
@@ -134,6 +136,21 @@
                     <p style="font-size: 0.8em; opacity: 0.7; padding: 10px;">Aperte [B] para alternar o modo de construção.</p>
                 </div>
 
+                <!-- Tab: Personagem -->
+                <div id="tab-personagem" class="tab-content">
+                    <div class="settings-group">
+                        <h3>Prévia do Herói</h3>
+                        <div id="character-preview-container" class="preview-box"></div>
+                    </div>
+                    <div class="settings-group">
+                        <h3>Customização</h3>
+                        <div class="setting-row vertical">
+                            <label>Importar Modelo (GLB/FBX)</label>
+                            <input type="file" id="char-model-upload" accept=".glb,.gltf,.fbx" class="file-input">
+                        </div>
+                        <button id="btn-reset-character" class="btn secondary full">Restaurar Padrão</button>
+                    </div>
+                </div>
                 <!-- Tab: Terreno -->
                 <div id="tab-terreno" class="tab-content">
                     <div class="settings-group">

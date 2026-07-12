@@ -1,3 +1,6 @@
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { Settings } from '../core/Settings.js';
 
 export class UIManager {
@@ -6,6 +9,7 @@ export class UIManager {
         this.elements = {
             settingsToggle: document.getElementById('settings-toggle'),
             settingsMenu: document.getElementById('settings-menu'),
+            menuOverlay: document.getElementById('menu-overlay'),
             tabButtons: document.querySelectorAll('.tab-btn'),
             tabContents: document.querySelectorAll('.tab-content'),
             timeDisplay: document.getElementById('time-display'),
@@ -45,6 +49,10 @@ export class UIManager {
             valTerrainDepth: document.getElementById("val-terrain-depth"),
             valWaterOpacity: document.getElementById("val-water-opacity"),
             buildList: document.getElementById('build-list'),
+            // Character
+            charPreviewContainer: document.getElementById('character-preview-container'),
+            charModelUpload: document.getElementById('char-model-upload'),
+            btnResetCharacter: document.getElementById('btn-reset-character'),
             // Modal
             modal: document.getElementById('global-modal'),
             modalTitle: document.getElementById('modal-title'),
@@ -53,7 +61,17 @@ export class UIManager {
             modalConfirm: document.getElementById('modal-confirm')
         };
 
+        this.preview = {
+            scene: null,
+            camera: null,
+            renderer: null,
+            model: null,
+            mixer: null,
+            clock: new THREE.Clock()
+        };
+
         this.init();
+        this.initCharacterPreview();
     }
 
     init() {
@@ -61,6 +79,17 @@ export class UIManager {
             this.elements.settingsToggle.addEventListener('click', () => {
                 const isOpen = this.elements.settingsMenu.classList.toggle('open');
                 this.elements.settingsToggle.classList.toggle('sidebar-open', isOpen);
+                if (this.elements.menuOverlay) this.elements.menuOverlay.classList.toggle('active', isOpen);
+                this.game.engine.isInteractingWithUI = isOpen;
+
+                if (isOpen) {
+                    this.elements.menuOverlay.onclick = () => {
+                        this.elements.settingsMenu.classList.remove('open');
+                        this.elements.menuOverlay.classList.remove('active');
+                        this.elements.settingsToggle.classList.remove('sidebar-open');
+                        this.game.engine.isInteractingWithUI = false;
+                    };
+                }
             });
         }
 
@@ -73,6 +102,28 @@ export class UIManager {
                 if (target) target.classList.add('active');
             });
         });
+
+        // Character Upload
+        if (this.elements.charModelUpload) {
+            this.elements.charModelUpload.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        this.game.player.loadCustomModel(event.target.result, file.name);
+                        this.updatePreviewModel();
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
+            });
+        }
+
+        if (this.elements.btnResetCharacter) {
+            this.elements.btnResetCharacter.addEventListener('click', () => {
+                this.game.player.loadModel(); // Reload default
+                setTimeout(() => this.updatePreviewModel(), 500);
+            });
+        }
 
         // Time
         if (this.elements.realTimeToggle) {
@@ -98,32 +149,40 @@ export class UIManager {
                 Settings.camera.mode = e.target.value;
                 if (e.target.value === 'firstperson') {
                     this.game.engine.renderer.domElement.requestPointerLock();
-                } else if (document.pointerLockElement) {
-                    document.exitPointerLock();
                 }
             });
         }
         if (this.elements.cameraDistance) {
-            this.elements.cameraDistance.addEventListener('input', (e) => { Settings.camera.distance = parseFloat(e.target.value); if(this.elements.valCameraDistance) this.elements.valCameraDistance.innerText = e.target.value; });
+            this.elements.cameraDistance.addEventListener('input', (e) => {
+                Settings.camera.distance = parseFloat(e.target.value); if(this.elements.valCameraDistance) this.elements.valCameraDistance.innerText = e.target.value;
+            });
         }
         if (this.elements.cameraHeight) {
-            this.elements.cameraHeight.addEventListener('input', (e) => { Settings.camera.height = parseFloat(e.target.value); if(this.elements.valCameraHeight) this.elements.valCameraHeight.innerText = e.target.value; });
+            this.elements.cameraHeight.addEventListener('input', (e) => {
+                Settings.camera.height = parseFloat(e.target.value); if(this.elements.valCameraHeight) this.elements.valCameraHeight.innerText = e.target.value;
+            });
         }
         if (this.elements.cameraOffset) {
-            this.elements.cameraOffset.addEventListener('input', (e) => { Settings.camera.verticalOffset = parseFloat(e.target.value); if(this.elements.valCameraOffset) this.elements.valCameraOffset.innerText = parseFloat(e.target.value).toFixed(1); });
+            this.elements.cameraOffset.addEventListener('input', (e) => {
+                Settings.camera.verticalOffset = parseFloat(e.target.value); if(this.elements.valCameraOffset) this.elements.valCameraOffset.innerText = parseFloat(e.target.value).toFixed(1);
+            });
         }
 
         // Terrain
         if (this.elements.terrainSize) {
-            this.elements.terrainSize.addEventListener('change', (e) => {
+            this.elements.terrainSize.addEventListener('input', (e) => {
                 Settings.terrain.size = parseInt(e.target.value); if(this.elements.valTerrainSize) this.elements.valTerrainSize.innerText = e.target.value;
+            });
+            this.elements.terrainSize.addEventListener('change', (e) => {
                 this.game.terrain.init();
             });
         }
         if (this.elements.terrainQuality) {
-            this.elements.terrainQuality.addEventListener('change', (e) => {
+            this.elements.terrainQuality.addEventListener('input', (e) => {
                 Settings.terrain.quality = parseInt(e.target.value); if(this.elements.valTerrainQuality) this.elements.valTerrainQuality.innerText = e.target.value;
-                this.game.terrain.init();
+            });
+            this.elements.terrainQuality.addEventListener('change', (e) => {
+            this.game.terrain.init();
             });
         }
         if (this.elements.terrainTriangulate) {
@@ -217,6 +276,63 @@ export class UIManager {
             });
         }
         this.syncUI();
+    }
+
+    initCharacterPreview() {
+        if (!this.elements.charPreviewContainer) return;
+
+        const width = this.elements.charPreviewContainer.clientWidth;
+        const height = this.elements.charPreviewContainer.clientHeight;
+
+        this.preview.scene = new THREE.Scene();
+        this.preview.scene.background = new THREE.Color(0x050505);
+
+        this.preview.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+        this.preview.camera.position.set(0, 1.2, 3.5);
+        this.preview.camera.lookAt(0, 1, 0);
+
+        this.preview.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.preview.renderer.setSize(width, height);
+        this.preview.renderer.setPixelRatio(window.devicePixelRatio);
+        this.elements.charPreviewContainer.appendChild(this.preview.renderer.domElement);
+
+        const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+        this.preview.scene.add(ambient);
+
+        const sun = new THREE.DirectionalLight(0xffffff, 1);
+        sun.position.set(5, 10, 5);
+        this.preview.scene.add(sun);
+
+        const animate = () => {
+            requestAnimationFrame(animate);
+            const delta = this.preview.clock.getDelta();
+            if (this.preview.mixer) this.preview.mixer.update(delta);
+            if (this.preview.model) this.preview.model.rotation.y += delta * 0.5;
+            this.preview.renderer.render(this.preview.scene, this.preview.camera);
+        };
+        animate();
+
+        // Initial model
+        setTimeout(() => this.updatePreviewModel(), 1000);
+    }
+
+    updatePreviewModel() {
+        if (!this.game.player.model) return;
+
+        if (this.preview.model) this.preview.scene.remove(this.preview.model);
+
+        this.preview.model = this.game.player.model.clone();
+        this.preview.model.position.set(0, 0, 0);
+        this.preview.model.scale.set(1, 1, 1);
+        this.preview.scene.add(this.preview.model);
+
+        // Try to play idle animation in preview
+        this.preview.mixer = new THREE.AnimationMixer(this.preview.model);
+        const animations = this.game.player.rawAnimations;
+        if (animations && animations.length > 0) {
+            const idle = animations.find(a => a.name.toLowerCase().includes('idle')) || animations[0];
+            this.preview.mixer.clipAction(idle).play();
+        }
     }
 
     showModal(title, message, onConfirm = null, showCancel = true) {

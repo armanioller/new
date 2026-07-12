@@ -66,3 +66,31 @@ export const Settings = {
         ]
     }
 };
+
+export const GraphicsQuality = {
+    LOW: {
+        name: 'Baixo',
+        terrainQuality: 20,
+        starCount: 2000,
+        shadowRes: 512,
+        resourceDensity: 0.5
+    },
+    MEDIUM: {
+        name: 'Médio',
+        terrainQuality: 50,
+        starCount: 8000,
+        shadowRes: 1024,
+        resourceDensity: 0.8
+    },
+    HIGH: {
+        name: 'Alto',
+        terrainQuality: 80,
+        starCount: 15000,
+        shadowRes: 2048,
+        resourceDensity: 1.2
+    }
+};
+
+Settings.graphics = {
+    quality: 'MEDIUM'
+};

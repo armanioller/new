@@ -3,49 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Harvest Frontier - Low Poly RPG</title>
+    <title>RPG Medieval 3D - Low Poly</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.174.0/build/three.module.js",
-                "three/examples/jsm/": "https://unpkg.com/three@0.174.0/examples/jsm/"
-            }
-        }
-    </script>
 </head>
 <body>
-    <canvas id="game-canvas"></canvas>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
 
-    <div id="ui-layer">
-        <div id="menu-overlay"></div>
-
+        <!-- SOLID HUD: Bag (Top Left) -->
         <div id="hud-top-left" class="hud-panel">
-            <div class="hud-header">Mochila</div>
-            <div class="resource-container">
-                <div class="resource-item">
-                    <span class="icon">🪵</span>
-                    <span id="count-wood" class="value">0</span>
-                </div>
-                <div class="resource-item">
-                    <span class="icon">🪨</span>
-                    <span id="count-stone" class="value">0</span>
-                </div>
+            <div class="hud-header">MOCHILA</div>
+            <div class="resource-item">
+                <span class="icon">🪵</span>
+                <span id="count-wood" class="value">0</span>
+            </div>
+            <div class="resource-item">
+                <span class="icon">🪨</span>
+                <span id="count-stone" class="value">0</span>
             </div>
         </div>
 
-        <div id="hud-top-center" class="hud-panel time-panel">
-            <span id="time-display">12:00</span>
+        <div id="hud-top-center">
+            <span id="time-display">13:14</span>
         </div>
 
-        <button id="settings-toggle" class="ui-icon-button">⚙️</button>
+        <button id="settings-toggle" class="ui-icon-button">
+            <span class="icon">⚙️</span>
+        </button>
 
+        <div id="menu-overlay"></div>
         <div id="settings-menu" class="central-menu-modal">
             <div class="sidebar-header">
-                <h2>Configurações</h2>
+                <h2>CONFIGURAÇÕES</h2>
             </div>
 
             <div class="tabs">
@@ -58,198 +48,106 @@
             </div>
 
             <div class="sidebar-content">
-                <!-- Tab: Ambiente -->
+                <!-- Ambiente -->
                 <div id="tab-ambiente" class="tab-content active">
-                    <div class="settings-group">
-                        <h3>Controle do Tempo</h3>
-                        <div class="setting-row">
-                            <label class="switch">
-                                <input type="checkbox" id="real-time-toggle">
-                                <span class="slider"></span>
-                            </label>
-                            <span>Tempo Real (UTC)</span>
-                        </div>
-                        <div class="setting-row">
-                            <label class="switch">
-                                <input type="checkbox" id="time-freeze-toggle">
-                                <span class="slider"></span>
-                            </label>
-                            <span>Congelar Tempo</span>
-                        </div>
-                        <div id="manual-time-controls" style="display: none;">
+                    <div class="tab-grid">
+                        <div class="settings-group">
+                            <h3>Controle do Tempo</h3>
                             <div class="setting-row">
-                                <label>Hora do Dia</label>
-                                <input type="range" id="time-slider" min="0" max="24" step="0.01" value="12">
+                                <label class="switch">
+                                    <input type="checkbox" id="real-time-toggle">
+                                    <span class="slider"></span>
+                                </label>
+                                <span>Tempo Real</span>
                             </div>
-                            <div class="setting-row">
-                                <label>Velocidade</label>
-                                <input type="range" id="time-speed" min="0" max="10" step="0.1" value="1">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="settings-group">
-                        <h3>Cores do Céu</h3>
-                        <div class="color-grid">
-                            <div class="color-item"><label>Noite</label><input type="color" id="color-midnight" value="#020205"></div>
-                            <div class="color-item"><label>Alvorada</label><input type="color" id="color-dawn" value="#ffa07a"></div>
-                            <div class="color-item"><label>Dia</label><input type="color" id="color-noon" value="#87ceeb"></div>
-                            <div class="color-item"><label>Sunset</label><input type="color" id="color-sunset" value="#ff4500"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Tab: Camera -->
+                <!-- Câmera -->
                 <div id="tab-camera" class="tab-content">
-                    <div class="settings-group">
-                        <h3>Visão</h3>
-                        <div class="setting-row vertical">
-                            <label>Modo de Câmera</label>
-                            <select id="camera-mode">
-                                <option value="isometric">Isométrica (Clássico)</option>
-                                <option value="thirdperson">Terceira Pessoa (Chase)</option>
-                                <option value="firstperson">Primeira Pessoa (Imersão)</option>
-                                <option value="free">Construtor (Livre)</option>
-                            </select>
-                        </div>
-                        <div class="setting-row vertical">
-                            <label>Distância: <span id="val-camera-distance"></span></label>
-                            <input type="range" id="camera-distance" min="5" max="40" step="1" value="15">
-                        </div>
-                        <div class="setting-row vertical">
-                            <label>Altura: <span id="val-camera-height"></span></label>
-                            <input type="range" id="camera-height" min="2" max="30" step="1" value="12">
-                        </div>
-                        <div class="setting-row vertical">
-                            <label>Deslocamento: <span id="val-camera-offset"></span></label>
-                            <input type="range" id="camera-offset" min="-5" max="10" step="0.1" value="1.5">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tab: Construção -->
-                <div id="tab-construcao" class="tab-content">
-                    <div class="settings-group">
-                        <h3>Itens Disponíveis</h3>
-                        <div id="build-list" class="build-grid">
-                            <!-- Populated via JS -->
-                        </div>
-                    </div>
-                    <p style="font-size: 0.8em; opacity: 0.7; padding: 10px;">Aperte [B] para alternar o modo de construção.</p>
-                </div>
-
-                <!-- Tab: Personagem -->
-            <div id="tab-personagem" class="tab-content">
-                <div class="char-tab-layout">
-                    <div class="char-preview-column">
+                    <div class="tab-grid">
                         <div class="settings-group">
-                            <h3>Prévia do Herói</h3>
-                            <div id="character-preview-container" class="preview-box"></div>
-                            <button id="btn-reset-character" class="btn secondary full" style="width:100%; margin-top:10px;">Restaurar Padrão</button>
-                        </div>
-                    </div>
-                    <div class="char-settings-column">
-                        <div class="settings-group">
-                            <h3>Modelo Principal (.glb / .fbx)</h3>
-                            <label class="custom-file-upload">
-                                <input type="file" id="char-model-upload" class="file-input-hidden" accept=".glb,.fbx">
-                                <span>ESCOLHER MODELO</span>
-                            </label>
-                        </div>
-
-                        <div class="settings-group">
-                            <h3>Animações (FBX/GLB)</h3>
+                            <h3>Visão</h3>
                             <div class="setting-row vertical">
-                                <label>Parado (Idle)</label>
-                                <label class="custom-file-upload">
-                                    <input type="file" id="anim-idle-upload" class="file-input-hidden" accept=".fbx,.glb">
-                                    <span>IMPORTAR IDLE</span>
-                                </label>
-                            </div>
-                            <div class="setting-row vertical">
-                                <label>Caminhar (Walk)</label>
-                                <label class="custom-file-upload">
-                                    <input type="file" id="anim-walk-upload" class="file-input-hidden" accept=".fbx,.glb">
-                                    <span>IMPORTAR WALK</span>
-                                </label>
-                            </div>
-                            <div class="setting-row vertical">
-                                <label>Correr (Run)</label>
-                                <label class="custom-file-upload">
-                                    <input type="file" id="anim-run-upload" class="file-input-hidden" accept=".fbx,.glb">
-                                    <span>IMPORTAR RUN</span>
-                                </label>
-                            </div>
-                            <div class="setting-row vertical">
-                                <label>Pulo (Jump)</label>
-                                <label class="custom-file-upload">
-                                    <input type="file" id="anim-jump-upload" class="file-input-hidden" accept=".fbx,.glb">
-                                    <span>IMPORTAR JUMP</span>
-                                </label>
+                                <label>Câmera</label>
+                                <select id="camera-mode" class="medieval-select">
+                                    <option value="isometric">Isométrica</option>
+                                    <option value="thirdperson">Terceira Pessoa</option>
+                                </select>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
+                <!-- Personagem -->
+                <div id="tab-personagem" class="tab-content">
+                    <div class="char-tab-layout">
+                        <div class="char-preview-column">
+                            <div class="settings-group">
+                                <h3>PRÉVIA DO HERÓI</h3>
+                                <div id="character-preview-container"></div>
+                                <button id="btn-reset-character" class="btn secondary full">RESTAURAR PADRÃO</button>
+                            </div>
+                        </div>
+                        <div class="char-settings-column">
+                            <div class="settings-group">
+                                <h3>MODELO BASE (.GLB/FBX)</h3>
+                                <label class="custom-file-upload">
+                                    <input type="file" id="char-model-upload" class="file-input-hidden" accept=".glb,.fbx">
+                                    <span>📁 SELECIONAR MODELO</span>
+                                </label>
+                            </div>
 
-                <!-- Tab: Terreno -->
-                <div id="tab-terreno" class="tab-content">
-                    <div class="settings-group">
-                        <h3>Geometria</h3>
-                        <div class="setting-row vertical"><label>Tamanho: <span id="val-terrain-size"></span></label><input type="range" id="terrain-size" min="10" max="100" step="1" value="50"></div>
-                        <div class="setting-row vertical"><label>Subdivisões: <span id="val-terrain-quality"></span></label><input type="range" id="terrain-quality" min="10" max="100" step="1" value="40"></div>
-                        <div class="setting-row">
-                            <label class="switch"><input type="checkbox" id="terrain-triangulate" checked><span class="slider"></span></label>
-                            <span>Estilo Low-Poly</span>
-                        </div>
-                    </div>
-                    <div class="settings-group">
-                        <h3>Mar e Água</h3>
-                        <div class="setting-row vertical">
-                            <label>Profundidade: <span id="val-terrain-depth"></span></label>
-                            <input type="range" id="terrain-depth" min="-40" max="-1" step="1" value="-10">
-                        </div>
-                        <div class="setting-row vertical">
-                            <label>Opacidade: <span id="val-water-opacity"></span></label>
-                            <input type="range" id="water-opacity" min="0" max="1" step="0.05" value="0.6">
-                        </div>
-                    </div>
-                    <div class="settings-group">
-                        <h3>Cores do Mundo</h3>
-                        <div class="color-grid">
-                            <div class="color-item"><label>Água</label><input type="color" id="color-sea" value="#004466"></div>
-                            <div class="color-item"><label>Terra</label><input type="color" id="color-dirt" value="#5d4037"></div>
-                            <div class="color-item"><label>Grama</label><input type="color" id="color-grass" value="#3e4e20"></div>
-                            <div class="color-item"><label>Fundo Mar</label><input type="color" id="color-underwater" value="#000102"></div>
+                            <div class="settings-group">
+                                <h3>IMPORTAR ANIMAÇÕES</h3>
+                                <div class="setting-row vertical">
+                                    <label>PARADO (IDLE)</label>
+                                    <label class="custom-file-upload">
+                                        <input type="file" id="anim-idle-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                        <span>📁 SELECIONAR IDLE</span>
+                                    </label>
+                                </div>
+                                <div class="setting-row vertical">
+                                    <label>CAMINHAR (WALK)</label>
+                                    <label class="custom-file-upload">
+                                        <input type="file" id="anim-walk-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                        <span>📁 SELECIONAR WALK</span>
+                                    </label>
+                                </div>
+                                <div class="setting-row vertical">
+                                    <label>CORRER (RUN)</label>
+                                    <label class="custom-file-upload">
+                                        <input type="file" id="anim-run-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                        <span>📁 SELECIONAR RUN</span>
+                                    </label>
+                                </div>
+                                <div class="setting-row vertical">
+                                    <label>PULO (JUMP)</label>
+                                    <label class="custom-file-upload">
+                                        <input type="file" id="anim-jump-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                        <span>📁 SELECIONAR JUMP</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Tab: Sistema -->
+                <!-- Abas vazias para preenchimento posterior -->
+                <div id="tab-construcao" class="tab-content"><div class="tab-grid"></div></div>
+                <div id="tab-terreno" class="tab-content"><div class="tab-grid"></div></div>
                 <div id="tab-presets" class="tab-content">
-                    <div class="settings-group">
-                        <h3>Persistência</h3>
-                        <div class="btn-grid">
-                            <button id="btn-save-preset" class="btn primary">Salvar Local</button>
-                            <button id="btn-load-preset" class="btn secondary">Carregar Local</button>
+                    <div class="tab-grid">
+                        <div class="settings-group">
+                            <button id="btn-reset-defaults" class="btn danger full">REINICIAR JOGO</button>
                         </div>
                     </div>
-                    <div class="settings-group">
-                        <h3>Gráficos</h3>
-                        <div class="setting-row vertical">
-                            <label>Qualidade Geral</label>
-                            <select id="graphics-quality">
-                                <option value="LOW">Baixo</option>
-                                <option value="MEDIUM" selected>Médio</option>
-                                <option value="HIGH">Alto</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button id="btn-reset-defaults" class="btn danger full">Resetar Jogo</button>
                 </div>
             </div>
         </div>
 
+        <!-- SQUARED MINIMAP -->
         <div id="minimap-container" class="hud-panel">
             <div class="minimap-frame">
                 <canvas id="minimap-canvas"></canvas>
@@ -260,8 +158,9 @@
                 <div class="compass-marker W">O</div>
             </div>
         </div>
+
         <div id="help-hint">
-            [F] Colher | [B] Construir | [Espaço] Pular
+            [F] COLHER | [B] CONSTRUIR | [ESPAÇO] PULAR
         </div>
 
         <div id="global-modal" class="modal-overlay">
@@ -269,8 +168,8 @@
                 <div class="modal-header"><h2 id="modal-title"></h2></div>
                 <div class="modal-body"><p id="modal-message"></p></div>
                 <div class="modal-footer">
-                    <button id="modal-cancel" class="btn secondary">Cancelar</button>
-                    <button id="modal-confirm" class="btn primary">Confirmar</button>
+                    <button id="modal-cancel" class="btn secondary">CANCELAR</button>
+                    <button id="modal-confirm" class="btn primary">CONFIRMAR</button>
                 </div>
             </div>
         </div>

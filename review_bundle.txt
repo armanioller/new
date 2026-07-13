@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG Medieval 3D - Low Poly</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- SOLID HUD: Bag (Top Left) -->
+        <div id="hud-top-left" class="hud-panel">
+            <div class="hud-header">MOCHILA</div>
+            <div class="resource-item">
+                <span class="icon">🪵</span>
+                <span id="count-wood" class="value">0</span>
+            </div>
+            <div class="resource-item">
+                <span class="icon">🪨</span>
+                <span id="count-stone" class="value">0</span>
+            </div>
+        </div>
+
+        <div id="hud-top-center">
+            <span id="time-display">13:14</span>
+        </div>
+
+        <button id="settings-toggle" class="ui-icon-button">
+            <span class="icon">⚙️</span>
+        </button>
+
+        <div id="menu-overlay"></div>
+        <div id="settings-menu" class="central-menu-modal">
+            <div class="sidebar-header">
+                <h2>CONFIGURAÇÕES</h2>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="tab-ambiente">Ambiente</button>
+                <button class="tab-btn" data-tab="tab-camera">Câmera</button>
+                <button class="tab-btn" data-tab="tab-construcao">Construção</button>
+                <button class="tab-btn" data-tab="tab-personagem">Personagem</button>
+                <button class="tab-btn" data-tab="tab-terreno">Terreno</button>
+                <button class="tab-btn" data-tab="tab-presets">Sistema</button>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- Ambiente -->
+                <div id="tab-ambiente" class="tab-content active">
+                    <div class="tab-grid">
+                        <div class="settings-group">
+                            <h3>Controle do Tempo</h3>
+                            <div class="setting-row">
+                                <label class="switch">
+                                    <input type="checkbox" id="real-time-toggle">
+                                    <span class="slider"></span>
+                                </label>
+                                <span>Tempo Real</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Câmera -->
+                <div id="tab-camera" class="tab-content">
+                    <div class="tab-grid">
+                        <div class="settings-group">
+                            <h3>Visão</h3>
+                            <div class="setting-row vertical">
+                                <label>Câmera</label>
+                                <select id="camera-mode" class="medieval-select">
+                                    <option value="isometric">Isométrica</option>
+                                    <option value="thirdperson">Terceira Pessoa</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Personagem -->
+                <div id="tab-personagem" class="tab-content">
+                    <div class="char-tab-layout">
+                        <div class="char-preview-column">
+                            <div class="settings-group">
+                                <h3>PRÉVIA DO HERÓI</h3>
+                                <div id="character-preview-container"></div>
+                                <button id="btn-reset-character" class="btn secondary full">RESTAURAR PADRÃO</button>
+                            </div>
+                        </div>
+                        <div class="char-settings-column">
+                            <div class="settings-group">
+                                <h3>MODELO BASE (.GLB/FBX)</h3>
+                                <label class="custom-file-upload">
+                                    <input type="file" id="char-model-upload" class="file-input-hidden" accept=".glb,.fbx">
+                                    <span>📁 SELECIONAR MODELO</span>
+                                </label>
+                            </div>
+
+                            <div class="settings-group">
+                                <h3>IMPORTAR ANIMAÇÕES</h3>
+                                <div class="setting-row vertical">
+                                    <label>PARADO (IDLE)</label>
+                                    <label class="custom-file-upload">
+                                        <input type="file" id="anim-idle-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                        <span>📁 SELECIONAR IDLE</span>
+                                    </label>
+                                </div>
+                                <div class="setting-row vertical">
+                                    <label>CAMINHAR (WALK)</label>
+                                    <label class="custom-file-upload">
+                                        <input type="file" id="anim-walk-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                        <span>📁 SELECIONAR WALK</span>
+                                    </label>
+                                </div>
+                                <div class="setting-row vertical">
+                                    <label>CORRER (RUN)</label>
+                                    <label class="custom-file-upload">
+                                        <input type="file" id="anim-run-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                        <span>📁 SELECIONAR RUN</span>
+                                    </label>
+                                </div>
+                                <div class="setting-row vertical">
+                                    <label>PULO (JUMP)</label>
+                                    <label class="custom-file-upload">
+                                        <input type="file" id="anim-jump-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                        <span>📁 SELECIONAR JUMP</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Abas vazias para preenchimento posterior -->
+                <div id="tab-construcao" class="tab-content"><div class="tab-grid"></div></div>
+                <div id="tab-terreno" class="tab-content"><div class="tab-grid"></div></div>
+                <div id="tab-presets" class="tab-content">
+                    <div class="tab-grid">
+                        <div class="settings-group">
+                            <button id="btn-reset-defaults" class="btn danger full">REINICIAR JOGO</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SQUARED MINIMAP -->
+        <div id="minimap-container" class="hud-panel">
+            <div class="minimap-frame">
+                <canvas id="minimap-canvas"></canvas>
+                <div id="minimap-player-marker"></div>
+                <div class="compass-marker N">N</div>
+                <div class="compass-marker S">S</div>
+                <div class="compass-marker E">L</div>
+                <div class="compass-marker W">O</div>
+            </div>
+        </div>
+
+        <div id="help-hint">
+            [F] COLHER | [B] CONSTRUIR | [ESPAÇO] PULAR
+        </div>
+
+        <div id="global-modal" class="modal-overlay">
+            <div class="modal-container">
+                <div class="modal-header"><h2 id="modal-title"></h2></div>
+                <div class="modal-body"><p id="modal-message"></p></div>
+                <div class="modal-footer">
+                    <button id="modal-cancel" class="btn secondary">CANCELAR</button>
+                    <button id="modal-confirm" class="btn primary">CONFIRMAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
+:root {
+    --gold: #d4af37;
+    --gold-dim: #8a6d05;
+    --bg-dark: #000000;
+    --border-thin: 1px;
+    --border-thick: 2px;
+}
+
+* {
+    margin: 0; padding: 0; box-sizing: border-box;
+    user-select: none; border-radius: 0 !important;
+}
+
+body { overflow: hidden; background: #000; font-family: 'Inter', sans-serif; color: #eee; }
+#game-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+
+/* HUD - FORCE SOLID */
+.hud-panel {
+    position: fixed;
+    background: #000 !important;
+    border: var(--border-thin) solid var(--gold);
+    padding: 12px 18px;
+    font-family: 'Cinzel', serif;
+    z-index: 10;
+    opacity: 1 !important;
+    box-shadow: 0 0 20px rgba(0,0,0,1);
+}
+
+#hud-top-left { top: 15px; left: 15px; min-width: 140px; border-width: var(--border-thick); }
+#hud-top-center {
+    position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    padding: 10px 40px; background: #000; border: var(--border-thin) solid var(--gold);
+    border-top: none; z-index: 10; color: var(--gold); font-family: 'Cinzel', serif;
+}
+
+.hud-header { color: var(--gold); font-size: 0.85em; margin-bottom: 10px; border-bottom: 1px solid rgba(212,175,55,0.2); padding-bottom: 4px; letter-spacing: 2px; }
+.resource-item { display: flex; align-items: center; gap: 10px; margin: 5px 0; }
+.resource-item .value { font-weight: bold; font-size: 1.2em; color: #fff; }
+
+.ui-icon-button {
+    position: fixed; top: 15px; right: 15px; width: 44px; height: 44px;
+    background: #000; border: var(--border-thick) solid var(--gold); color: var(--gold);
+    cursor: pointer; z-index: 100; display: flex; align-items: center; justify-content: center;
+}
+
+/* MINIMAP */
+#minimap-container {
+    bottom: 20px; right: 20px; width: 240px; height: 240px;
+    padding: 6px; background: #000 !important;
+}
+.minimap-frame { position: relative; width: 100%; height: 100%; background: #000; overflow: hidden; border: 1px solid #111; }
+#minimap-canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+#minimap-player-marker {
+    position: absolute; top: 50%; left: 50%; width: 12px; height: 12px;
+    background: #fff; border: 2px solid #000; z-index: 5;
+}
+#minimap-player-marker::after {
+    content: ""; position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #f9d71c;
+}
+
+.compass-marker { position: absolute; color: var(--gold); font-size: 0.75em; font-weight: bold; font-family: 'Cinzel', serif; }
+.compass-marker.N { top: 2px; left: 50%; transform: translateX(-50%); }
+.compass-marker.S { bottom: 2px; left: 50%; transform: translateX(-50%); }
+.compass-marker.E { right: 4px; top: 50%; transform: translateY(-50%); }
+.compass-marker.W { left: 4px; top: 50%; transform: translateY(-50%); }
+
+/* MODALS */
+#menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 999; display: none; }
+#menu-overlay.active { display: block; }
+
+.central-menu-modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 850px; max-width: 95vw; height: 650px; max-height: 90vh;
+    background: #0a0a0a; border: var(--border-thick) solid var(--gold);
+    z-index: 1000; display: none; flex-direction: column;
+}
+.central-menu-modal.open { display: flex; }
+
+.sidebar-header { background: #1a1a1a; padding: 20px; border-bottom: var(--border-thick) solid var(--gold); text-align: center; }
+.sidebar-header h2 { font-family: 'Cinzel', serif; color: var(--gold); letter-spacing: 4px; }
+.tabs { display: flex; background: #000; border-bottom: 1px solid #333; }
+.tab-btn { flex: 1; padding: 15px 5px; border: none; background: transparent; color: #555; cursor: pointer; font-family: 'Cinzel', serif; font-size: 0.8em; border-bottom: 3px solid transparent; }
+.tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); background: #111; }
+.sidebar-content { flex: 1; overflow: hidden; display: flex; }
+.tab-content { display: none; width: 100%; height: 100%; }
+.tab-content.active { display: block; }
+.tab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 25px; overflow-y: auto; height: 100%; }
+
+/* CHARACTER TAB */
+.char-tab-layout { display: flex; width: 100%; height: 100%; }
+.char-preview-column { flex: 0 0 360px; background: #050505; border-right: 1px solid #222; padding: 20px; display: flex; flex-direction: column; }
+.char-settings-column { flex: 1; padding: 20px; overflow-y: auto; }
+#character-preview-container { width: 100%; flex: 1; background: #000; border: 1px solid #1a1a1a; margin-bottom: 15px; }
+
+.settings-group { padding: 18px; background: #0d0d0d; border: 1px solid #1a1a1a; margin-bottom: 25px; }
+.settings-group h3 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 0.85em; margin-bottom: 15px; border-bottom: 1px solid #222; padding-bottom: 6px; }
+.setting-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; color: #aaa; }
+.setting-row.vertical { flex-direction: column; align-items: flex-start; gap: 8px; }
+.btn { padding: 14px; border: none; cursor: pointer; font-family: 'Cinzel', serif; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; }
+.btn.full { width: 100%; }
+.btn.primary { background: var(--gold); color: #000; }
+.btn.secondary { background: #222; color: #888; border: 1px solid #333; }
+.btn.danger { background: #600; color: #fff; }
+.custom-file-upload { display: block; width: 100%; padding: 14px; background: #111; border: 1px solid #333; color: var(--gold); text-align: center; cursor: pointer; font-size: 0.8em; }
+.file-input-hidden { display: none; }
+
+#help-hint { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); background: #000; border: 1px solid var(--gold); padding: 10px 40px; color: var(--gold); font-family: 'Cinzel', serif; letter-spacing: 3px; font-size: 0.9em; }
+
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.9); z-index: 2000;
+    display: none; align-items: center; justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+.modal-container {
+    background: #000; border: var(--border-thick) solid var(--gold);
+    width: 450px; max-width: 90vw; padding: 40px; text-align: center;
+}
+.modal-header h2 { font-family: 'Cinzel', serif; color: var(--gold); margin-bottom: 20px; }
+.modal-body { margin-bottom: 30px; color: #ccc; }
+.modal-footer { display: flex; gap: 10px; justify-content: center; }
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #000; }
+::-webkit-scrollbar-thumb { background: #222; border: 1px solid #333; }
+import * as THREE from 'three';
+import { Settings } from '../core/Settings.js';
+
+export class UIManager {
+    constructor(game) {
+        this.game = game;
+        this.elements = {
+            settingsToggle: document.getElementById('settings-toggle'),
+            settingsMenu: document.getElementById('settings-menu'),
+            menuOverlay: document.getElementById('menu-overlay'),
+            tabButtons: document.querySelectorAll('.tab-btn'),
+            tabContents: document.querySelectorAll('.tab-content'),
+            timeDisplay: document.getElementById('time-display'),
+            woodCount: document.getElementById('count-wood'),
+            stoneCount: document.getElementById('count-stone'),
+            charPreviewContainer: document.getElementById('character-preview-container'),
+            charModelUpload: document.getElementById('char-model-upload'),
+            animIdleUpload: document.getElementById('anim-idle-upload'),
+            animWalkUpload: document.getElementById('anim-walk-upload'),
+            animRunUpload: document.getElementById('anim-run-upload'),
+            animJumpUpload: document.getElementById('anim-jump-upload'),
+            btnResetCharacter: document.getElementById('btn-reset-character'),
+            modal: document.getElementById('global-modal'),
+            modalTitle: document.getElementById('modal-title'),
+            modalMessage: document.getElementById('modal-message'),
+            modalCancel: document.getElementById('modal-cancel'),
+            modalConfirm: document.getElementById('modal-confirm')
+        };
+
+        this.preview = {
+            scene: null, camera: null, renderer: null, model: null, mixer: null, clock: new THREE.Clock()
+        };
+
+        this.init();
+        this.initCharacterPreview();
+        this.game.player.onModelReady = () => this.updatePreviewModel();
+    }
+
+    init() {
+        if (this.elements.settingsToggle) {
+            this.elements.settingsToggle.addEventListener('click', () => {
+                const isOpen = this.elements.settingsMenu.classList.toggle('open');
+                if (this.elements.menuOverlay) this.elements.menuOverlay.classList.toggle('active', isOpen);
+                this.game.engine.isInteractingWithUI = isOpen;
+                if (isOpen) {
+                    this.elements.menuOverlay.onclick = () => {
+                        this.elements.settingsMenu.classList.remove('open');
+                        this.elements.menuOverlay.classList.remove('active');
+                        this.game.engine.isInteractingWithUI = false;
+                    };
+                }
+            });
+        }
+
+        this.elements.tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.elements.tabButtons.forEach(b => b.classList.remove('active'));
+                this.elements.tabContents.forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                const targetId = btn.getAttribute('data-tab');
+                const target = document.getElementById(targetId);
+                if (target) {
+                    target.classList.add('active');
+                    if (targetId === 'tab-personagem') {
+                        setTimeout(() => {
+                            this.resizePreview();
+                            this.updatePreviewModel();
+                        }, 50);
+                    }
+                }
+            });
+        });
+
+        const handleUpload = (element, callback) => {
+            if (!element) return;
+            element.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => callback(event.target.result, file.name);
+                    reader.readAsArrayBuffer(file);
+                    const span = element.parentElement.querySelector('span');
+                    if (span) span.innerText = `✔️ ${file.name.substring(0, 10)}...`;
+                }
+            });
+        };
+
+        handleUpload(this.elements.charModelUpload, (buffer, name) => {
+            this.game.player.loadCustomModel(buffer, name);
+            setTimeout(() => this.updatePreviewModel(), 500);
+        });
+
+        handleUpload(this.elements.animIdleUpload, (buffer, name) => this.game.player.loadCustomAnimation(buffer, name, 'idle'));
+        handleUpload(this.elements.animWalkUpload, (buffer, name) => this.game.player.loadCustomAnimation(buffer, name, 'walking'));
+        handleUpload(this.elements.animRunUpload, (buffer, name) => this.game.player.loadCustomAnimation(buffer, name, 'running'));
+        handleUpload(this.elements.animJumpUpload, (buffer, name) => this.game.player.loadCustomAnimation(buffer, name, 'jump'));
+
+        if (this.elements.btnResetCharacter) {
+            this.elements.btnResetCharacter.addEventListener('click', () => {
+                this.game.player.loadModel();
+                setTimeout(() => this.updatePreviewModel(), 1000);
+            });
+        }
+    }
+
+    resizePreview() {
+        if (!this.elements.charPreviewContainer || !this.preview.renderer) return;
+        const width = this.elements.charPreviewContainer.clientWidth || 310;
+        const height = this.elements.charPreviewContainer.clientHeight || 400;
+        this.preview.camera.aspect = width / height;
+        this.preview.camera.updateProjectionMatrix();
+        this.preview.renderer.setSize(width, height);
+    }
+
+    initCharacterPreview() {
+        if (!this.elements.charPreviewContainer) return;
+        const width = 310; const height = 400;
+        this.preview.scene = new THREE.Scene();
+        this.preview.scene.background = new THREE.Color(0x050505);
+        this.preview.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+        this.preview.camera.position.set(0, 1.2, 3.0);
+        this.preview.camera.lookAt(0, 1.0, 0);
+        this.preview.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.preview.renderer.setSize(width, height);
+        this.preview.renderer.setPixelRatio(window.devicePixelRatio);
+        this.elements.charPreviewContainer.appendChild(this.preview.renderer.domElement);
+        this.preview.scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+        const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+        sun.position.set(5, 10, 5);
+        this.preview.scene.add(sun);
+        const animate = () => {
+            requestAnimationFrame(animate);
+            const delta = this.preview.clock.getDelta();
+            if (this.preview.mixer) this.preview.mixer.update(delta);
+            if (this.preview.model) this.preview.model.rotation.y += delta * 0.4;
+            this.preview.renderer.render(this.preview.scene, this.preview.camera);
+        };
+        animate();
+    }
+
+    updatePreviewModel() {
+        if (!this.game.player.model) return;
+        if (this.preview.model) this.preview.scene.remove(this.preview.model);
+        this.preview.model = this.game.player.model.clone();
+        this.preview.model.position.set(0, 0, 0);
+        this.preview.model.scale.set(1, 1, 1);
+        this.preview.scene.add(this.preview.model);
+        this.preview.mixer = new THREE.AnimationMixer(this.preview.model);
+        const animations = this.game.player.rawAnimations;
+        if (animations && animations.length > 0) {
+            const idle = animations.find(a => a.name === 'idle') ||
+                         animations.find(a => a.name.toLowerCase().includes('idle')) ||
+                         animations[0];
+            const action = this.preview.mixer.clipAction(idle);
+            action.reset().play();
+        }
+    }
+
+    showModal(title, message, onConfirm = null, showCancel = true) {
+        if (!this.elements.modal) return;
+        this.elements.modalTitle.innerText = title;
+        this.elements.modalMessage.innerText = message;
+        this.elements.modalCancel.style.display = showCancel ? 'block' : 'none';
+        this.elements.modal.classList.add('active');
+        const close = () => this.elements.modal.classList.remove('active');
+        this.elements.modalConfirm.onclick = () => { if (onConfirm) onConfirm(); close(); };
+        this.elements.modalCancel.onclick = close;
+    }
+
+    update() {
+        const inv = this.game.player.inventory;
+        if (this.elements.woodCount) this.elements.woodCount.innerText = inv.wood || 0;
+        if (this.elements.stoneCount) this.elements.stoneCount.innerText = inv.stone || 0;
+        const h = Math.floor(Settings.time.timeOfDay);
+        const m = Math.floor((Settings.time.timeOfDay % 1) * 60);
+        if (this.elements.timeDisplay) this.elements.timeDisplay.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    }
+}
+import * as THREE from 'three';
+import { Settings } from '../core/Settings.js';
+
+export class MinimapManager {
+    constructor(game) {
+        this.game = game;
+        this.scene = game.engine.scene;
+        this.renderer = game.engine.renderer;
+
+        this.canvas = document.getElementById('minimap-canvas');
+        this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
+        this.playerMarker = document.getElementById('minimap-player-marker');
+
+        this.renderTarget = new THREE.WebGLRenderTarget(1024, 1024);
+        this.minimapCamera = new THREE.OrthographicCamera(-300, 300, 300, -300, 1, 5000);
+        this.minimapCamera.position.set(0, 2000, 0);
+        this.minimapCamera.lookAt(0, 0, 0);
+        this.minimapCamera.up.set(0, 0, -1); // North (-Z) is UP
+
+        this.lastRenderTime = 0;
+        this.renderInterval = 10000;
+
+        this.init();
+    }
+
+    init() {
+        if (!this.canvas) return;
+        const size = 228;
+        this.canvas.width = size;
+        this.canvas.height = size;
+        setTimeout(() => this.renderTerrain(), 3000);
+    }
+
+    renderTerrain() {
+        const { terrain, environment } = this.game;
+        if (!terrain || !terrain.floor || !this.ctx) return;
+
+        const oldFog = this.scene.fog;
+        this.scene.fog = null;
+
+        if (environment && environment.boostForMinimap) environment.boostForMinimap(true);
+
+        const hiddenObjects = [];
+        this.scene.traverse(obj => {
+            if (obj.name === "skydome" || obj.name === "stars" || obj.name === "player-group") {
+                if (obj.visible) {
+                    obj.visible = false;
+                    hiddenObjects.push(obj);
+                }
+            }
+        });
+
+        const worldSize = Settings.terrain.size * 15;
+        const halfSize = worldSize / 2;
+        this.minimapCamera.left = -halfSize;
+        this.minimapCamera.right = halfSize;
+        this.minimapCamera.top = halfSize;
+        this.minimapCamera.bottom = -halfSize;
+        this.minimapCamera.updateProjectionMatrix();
+
+        const oldTarget = this.renderer.getRenderTarget();
+        this.renderer.setRenderTarget(this.renderTarget);
+        this.renderer.render(this.scene, this.minimapCamera);
+        this.renderer.setRenderTarget(oldTarget);
+
+        const pixels = new Uint8Array(1024 * 1024 * 4);
+        this.renderer.readRenderTargetPixels(this.renderTarget, 0, 0, 1024, 1024, pixels);
+        const imageData = new ImageData(new Uint8ClampedArray(pixels), 1024, 1024);
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = 1024;
+        tempCanvas.height = 1024;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.putImageData(imageData, 0, 0);
+
+        this.ctx.save();
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.translate(0, this.canvas.height);
+        this.ctx.scale(1, -1);
+        this.ctx.drawImage(tempCanvas, 0, 0, 1024, 1024, 0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.restore();
+
+        if (environment && environment.boostForMinimap) environment.boostForMinimap(false);
+        this.scene.fog = oldFog;
+        hiddenObjects.forEach(obj => obj.visible = true);
+    }
+
+    update(time) {
+        if (!this.canvas) return;
+        if (time - this.lastRenderTime > this.renderInterval) {
+            this.renderTerrain();
+            this.lastRenderTime = time;
+        }
+
+        const playerPos = this.game.player.group.position;
+        const worldSize = Settings.terrain.size * 15;
+        const halfSize = worldSize / 2;
+
+        const pctX = (playerPos.x + halfSize) / worldSize;
+        const pctZ = (playerPos.z + halfSize) / worldSize;
+
+        if (this.playerMarker) {
+            this.playerMarker.style.left = `${pctX * 100}%`;
+            this.playerMarker.style.top = `${pctZ * 100}%`;
+            const rotDeg = (this.game.player.group.rotation.y * 180 / Math.PI) + 180;
+            this.playerMarker.style.transform = `translate(-50%, -50%) rotate(${rotDeg}deg)`;
+        }
+    }
+}
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
+import { Settings } from '../core/Settings.js';
+
+export class Player {
+    constructor(scene, terrain) {
+        this.scene = scene;
+        this.terrain = terrain;
+        this.group = new THREE.Group();
+        this.group.position.set(0, 5, 0);
+        this.scene.add(this.group);
+
+        this.model = null;
+        this.rawAnimations = [];
+        this.customClips = {};
+        this.physicalRotation = 0;
+        this.inventory = { wood: 0, stone: 0 };
+        this.keys = {};
+
+        this.mixer = null;
+        this.animations = {};
+        this.currentAction = null;
+
+        // Jump Physics
+        this.isJumping = false;
+        this.jumpVelocity = 0;
+        this.jumpHeight = 0;
+        this.gravity = 32;
+
+        window.addEventListener('keydown', (e) => this.keys[e.key.toLowerCase()] = true);
+        window.addEventListener('keyup', (e) => this.keys[e.key.toLowerCase()] = false);
+
+        this.initPlaceholder();
+        this.loadModel();
+    }
+
+    initPlaceholder() {
+        if (this.placeholder) this.group.remove(this.placeholder);
+        this.placeholder = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.4), new THREE.MeshStandardMaterial({ color: 0xcd7f32 }));
+        body.position.y = 0.6;
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: 0xc0c0c0 }));
+        head.position.y = 1.45;
+        this.placeholder.add(body, head);
+        this.group.add(this.placeholder);
+    }
+
+    loadModel() {
+        const loader = new GLTFLoader();
+        loader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
+            this.setupModel(gltf.scene, gltf.animations);
+        });
+    }
+
+    loadCustomModel(buffer, filename) {
+        const extension = filename.split('.').pop().toLowerCase();
+        const blob = new Blob([buffer]);
+        const url = URL.createObjectURL(blob);
+
+        const onLoaded = (object, animations) => {
+            this.setupModel(object, animations);
+            URL.revokeObjectURL(url);
+        };
+
+        if (extension === 'glb' || extension === 'gltf') {
+            new GLTFLoader().load(url, (gltf) => onLoaded(gltf.scene, gltf.animations));
+        } else if (extension === 'fbx') {
+            new FBXLoader().load(url, (object) => onLoaded(object, object.animations));
+        }
+    }
+
+    loadCustomAnimation(buffer, filename, type) {
+        const extension = filename.split('.').pop().toLowerCase();
+        const blob = new Blob([buffer]);
+        const url = URL.createObjectURL(blob);
+
+        const onLoaded = (animations) => {
+            if (animations && animations.length > 0) {
+                const clip = animations[0];
+                clip.name = type;
+                this.customClips[type] = clip;
+                if (this.mixer) {
+                    this.animations[type] = this.mixer.clipAction(clip);
+                }
+            }
+            URL.revokeObjectURL(url);
+        };
+
+        if (extension === 'glb' || extension === 'gltf') {
+            new GLTFLoader().load(url, (gltf) => onLoaded(gltf.animations));
+        } else if (extension === 'fbx') {
+            new FBXLoader().load(url, (object) => onLoaded(object.animations));
+        }
+    }
+
+    setupModel(model, animations) {
+        if (this.placeholder) this.group.remove(this.placeholder);
+        if (this.model) this.group.remove(this.model);
+
+        this.model = model;
+        this.rawAnimations = animations;
+
+        const box = new THREE.Box3().setFromObject(model);
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 1.8 / maxDim;
+        this.model.scale.set(scale, scale, scale);
+
+        this.model.traverse(c => { if(c.isMesh) c.castShadow = true; });
+        this.group.add(this.model);
+
+        this.mixer = new THREE.AnimationMixer(this.model);
+        this.animations = {};
+
+        animations.forEach(clip => {
+            const name = clip.name.toLowerCase();
+            const action = this.mixer.clipAction(clip);
+            if (name.includes('idle')) this.animations['idle'] = action;
+            if (name.includes('walk')) this.animations['walking'] = action;
+            if (name.includes('run')) this.animations['running'] = action;
+            if (name.includes('jump')) this.animations['jump'] = action;
+        });
+
+        Object.keys(this.customClips).forEach(type => {
+            this.animations[type] = this.mixer.clipAction(this.customClips[type]);
+        });
+
+        if (!this.animations['idle'] && animations.length > 0) this.animations['idle'] = this.mixer.clipAction(animations[0]);
+
+        this.fadeToAction('idle');
+    }
+
+    fadeToAction(name, duration = 0.15) {
+        if (!this.animations[name]) {
+            if (name === 'running' && this.animations['walking']) name = 'walking';
+            else return;
+        }
+
+        const nextAction = this.animations[name];
+        if (this.currentAction === nextAction && nextAction.isRunning()) return;
+
+        if (this.currentAction) {
+            this.currentAction.fadeOut(duration);
+        }
+
+        this.currentAction = nextAction;
+
+        if (name === 'jump' || name.includes('jump')) {
+            this.currentAction.setLoop(THREE.LoopOnce);
+            this.currentAction.clampWhenFinished = true;
+        } else {
+            this.currentAction.setLoop(THREE.LoopRepeat);
+        }
+
+        this.currentAction
+            .reset()
+            .setEffectiveTimeScale(1)
+            .setEffectiveWeight(1)
+            .fadeIn(duration)
+            .play();
+    }
+
+    update(delta, camera) {
+        if (this.mixer) this.mixer.update(delta);
+        if (Settings.camera.mode === 'free') return;
+
+        const moveX = (this.keys.d ? 1 : 0) - (this.keys.a ? 1 : 0);
+        const moveZ = (this.keys.s ? 1 : 0) - (this.keys.w ? 1 : 0);
+        const isMoving = moveX !== 0 || moveZ !== 0;
+        const isRunning = this.keys.shift;
+
+        if (isMoving) {
+            const camForward = new THREE.Vector3();
+            camera.getWorldDirection(camForward);
+            camForward.y = 0;
+            camForward.normalize();
+
+            const camRight = new THREE.Vector3();
+            camRight.crossVectors(THREE.Object3D.DEFAULT_UP, camForward);
+
+            const moveVec = new THREE.Vector3();
+            moveVec.addScaledVector(camForward, -moveZ);
+            moveVec.addScaledVector(camRight, -moveX);
+            moveVec.normalize();
+
+            this.physicalRotation = Math.atan2(moveVec.x, moveVec.z);
+
+            const baseSpeed = isRunning ? Settings.player.moveSpeed * 1.8 : Settings.player.moveSpeed;
+            const speed = baseSpeed * delta;
+
+            const nextPos = this.group.position.clone().addScaledVector(moveVec, speed);
+            const distFromCenter = Math.sqrt(nextPos.x * nextPos.x + nextPos.z * nextPos.z);
+            if (distFromCenter < Settings.terrain.size * 7.5) {
+                this.group.position.copy(nextPos);
+            }
+
+            if (!this.isJumping) {
+                this.fadeToAction(isRunning ? 'running' : 'walking');
+            }
+        } else {
+            if (!this.isJumping) {
+                this.fadeToAction('idle');
+            }
+            if (Settings.camera.mode === 'firstperson') {
+                const camForward = new THREE.Vector3();
+                camera.getWorldDirection(camForward);
+                this.physicalRotation = Math.atan2(camForward.x, camForward.z);
+            }
+        }
+
+        if (this.keys[' '] && !this.isJumping) {
+            this.isJumping = true;
+            this.jumpVelocity = 11;
+            this.fadeToAction('jump');
+        }
+
+        if (this.isJumping) {
+            this.jumpHeight += this.jumpVelocity * delta;
+            this.jumpVelocity -= this.gravity * delta;
+            if (this.jumpHeight <= 0) {
+                this.jumpHeight = 0;
+                this.isJumping = false;
+                this.fadeToAction(isMoving ? (isRunning ? 'running' : 'walking') : 'idle');
+            }
+        }
+
+        let rotDiff = this.physicalRotation - this.group.rotation.y;
+        rotDiff = Math.atan2(Math.sin(rotDiff), Math.cos(rotDiff));
+        this.group.rotation.y += rotDiff * Math.min(1.0, 5 * delta);
+
+        const groundH = this.terrain.getHeight(this.group.position.x, this.group.position.z);
+        const targetY = groundH + this.jumpHeight;
+
+        if (groundH < Settings.terrain.waterLevel) {
+             this.group.position.y = targetY;
+        } else {
+             this.group.position.y = THREE.MathUtils.lerp(this.group.position.y, targetY, 15 * delta);
+        }
+    }
+
+    get position() { return this.group.position; }
+}
+import * as THREE from 'three';
+import { Settings } from '../core/Settings.js';
+
+export class EnvironmentManager {
+    constructor(scene) {
+        this.scene = scene;
+
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        this.scene.add(this.ambientLight);
+
+        this.sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        this.sunLight.position.set(50, 100, 50);
+        this.sunLight.castShadow = true;
+
+        this.sunLight.shadow.mapSize.set(2048, 2048);
+        this.sunLight.shadow.camera.left = -150;
+        this.sunLight.shadow.camera.right = 150;
+        this.sunLight.shadow.camera.top = 150;
+        this.sunLight.shadow.camera.bottom = -150;
+        this.sunLight.shadow.camera.near = 0.5;
+        this.sunLight.shadow.camera.far = 2500;
+        this.scene.add(this.sunLight);
+
+        // THICK FOG
+        this.fog = new THREE.FogExp2(0x87ceeb, 0.0025);
+        this.scene.fog = this.fog;
+
+        this.initStars();
+    }
+
+    initStars() {
+        const starCount = 8000; // Increased count
+        const positions = new Float32Array(starCount * 3);
+        const sizes = new Float32Array(starCount);
+        const twinkleSeeds = new Float32Array(starCount);
+
+        for (let i = 0; i < starCount; i++) {
+            const i3 = i * 3;
+            // Spread stars in a sphere
+            const r = 8000 + Math.random() * 1000;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+
+            positions[i3] = r * Math.sin(phi) * Math.cos(theta);
+            positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            positions[i3 + 2] = r * Math.cos(phi);
+
+            sizes[i] = 1.5 + Math.random() * 4.0;
+            twinkleSeeds[i] = Math.random() * 10.0;
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+        geometry.setAttribute('twinkleSeed', new THREE.BufferAttribute(twinkleSeeds, 1));
+
+        this.starUniforms = {
+            uTime: { value: 0 },
+            uOpacity: { value: 0 },
+            uColor: { value: new THREE.Color(0xffffff) }
+        };
+
+        const vertexShader = `
+            attribute float size;
+            attribute float twinkleSeed;
+            uniform float uTime;
+            varying float vTwinkle;
+
+            void main() {
+                vTwinkle = sin(uTime * 3.0 + twinkleSeed) * 0.5 + 0.5;
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                gl_PointSize = size;
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `;
+
+        const fragmentShader = `
+            uniform vec3 uColor;
+            uniform float uOpacity;
+            varying float vTwinkle;
+
+            void main() {
+                float dist = distance(gl_PointCoord, vec2(0.5));
+                if (dist > 0.5) discard;
+
+                float brightness = 0.7 + vTwinkle * 0.3;
+                gl_FragColor = vec4(uColor, uOpacity * brightness);
+            }
+        `;
+
+        this.starMaterial = new THREE.ShaderMaterial({
+            uniforms: this.starUniforms,
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+            fog: false // Stars NOT affected by fog
+        });
+
+        this.stars = new THREE.Points(geometry, this.starMaterial);
+        this.stars.name = "stars";
+        this.scene.add(this.stars);
+    }
+
+    update(timeOfDay, cameraPos) {
+        const angle = ((timeOfDay - 6) / 24) * Math.PI * 2;
+
+        const sunDist = 1800;
+        this.sunLight.position.set(
+            Math.cos(angle) * sunDist,
+            Math.sin(angle) * sunDist,
+            sunDist * 0.3
+        );
+
+        const t = timeOfDay;
+        const c = Settings.time.colors;
+        let skyColor = new THREE.Color();
+
+        if (t >= 5 && t < 8) {
+            skyColor.copy(c.midnight).lerp(c.dawn, (t - 5) / 3);
+        } else if (t >= 8 && t < 17) {
+            skyColor.copy(c.dawn).lerp(c.noon, (t - 8) / 9);
+        } else if (t >= 17 && t < 20) {
+            skyColor.copy(c.noon).lerp(c.sunset, (t - 17) / 3);
+        } else if (t >= 20 && t < 23) {
+            skyColor.copy(c.sunset).lerp(c.midnight, (t - 20) / 3);
+        } else {
+            skyColor.copy(c.midnight);
+        }
+
+        this.scene.background = skyColor;
+
+        const skydome = this.scene.getObjectByName("skydome");
+        if (skydome) {
+            skydome.material.color.copy(skyColor);
+            if (cameraPos) skydome.position.copy(cameraPos);
+        }
+
+        if (this.stars && cameraPos) {
+            this.stars.position.copy(cameraPos);
+        }
+
+        // UPDATE STARS OPACITY AND TIME
+        let starOpacity = 0;
+        if (t < 5 || t > 20) {
+            starOpacity = 1;
+        } else if (t >= 5 && t < 7) {
+            starOpacity = 1 - (t - 5) / 2;
+        } else if (t >= 18 && t <= 20) {
+            starOpacity = (t - 18) / 2;
+        }
+
+        if (this.starMaterial) {
+            this.starUniforms.uOpacity.value = starOpacity;
+            this.starUniforms.uTime.value = performance.now() / 1000;
+            this.stars.visible = starOpacity > 0;
+        }
+
+        const water = this.scene.getObjectByName("water");
+        if (water && water.material) {
+            const dayFactor = Math.max(0, Math.sin(angle));
+            const baseWaterColor = Settings.terrain.colors.sea;
+            const nightWaterColor = new THREE.Color(0x00050a);
+
+            water.material.color.copy(nightWaterColor).lerp(baseWaterColor, dayFactor);
+            water.material.emissive.copy(skyColor).multiplyScalar(0.04);
+        }
+
+        const dayFactor = Math.max(0, Math.sin(angle));
+        this.sunLight.intensity = dayFactor * 1.6;
+        this.ambientLight.intensity = 0.25 + (dayFactor * 0.35);
+
+        if (t > 16 && t < 20) {
+            this.sunLight.color.setHex(0xffaa88);
+        } else if (t > 5 && t < 9) {
+            this.sunLight.color.setHex(0xffccaa);
+        } else {
+            this.sunLight.color.setHex(0xffffff);
+        }
+
+        return skyColor;
+    }
+}

@@ -1,6 +1,4 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { Settings } from '../core/Settings.js';
 
 export class UIManager {
@@ -13,43 +11,8 @@ export class UIManager {
             tabButtons: document.querySelectorAll('.tab-btn'),
             tabContents: document.querySelectorAll('.tab-content'),
             timeDisplay: document.getElementById('time-display'),
-            // Controls
-            realTimeToggle: document.getElementById('real-time-toggle'),
-            timeFreezeToggle: document.getElementById('time-freeze-toggle'),
-            timeSlider: document.getElementById('time-slider'),
-            timeSpeed: document.getElementById('time-speed'),
-            cameraMode: document.getElementById('camera-mode'),
-            cameraDistance: document.getElementById('camera-distance'),
-            cameraHeight: document.getElementById('camera-height'),
-            cameraOffset: document.getElementById('camera-offset'),
-            terrainSize: document.getElementById('terrain-size'),
-            terrainQuality: document.getElementById('terrain-quality'),
-            terrainTriangulate: document.getElementById('terrain-triangulate'),
-            terrainDepth: document.getElementById('terrain-depth'),
-            waterOpacity: document.getElementById('water-opacity'),
-            colorMidnight: document.getElementById('color-midnight'),
-            colorDawn: document.getElementById('color-dawn'),
-            colorNoon: document.getElementById('color-noon'),
-            colorSunset: document.getElementById('color-sunset'),
-            colorSea: document.getElementById('color-sea'),
-            colorDirt: document.getElementById('color-dirt'),
-            colorGrass: document.getElementById('color-grass'),
-            colorUnderwater: document.getElementById('color-underwater'),
-            btnSavePreset: document.getElementById('btn-save-preset'),
-            btnLoadPreset: document.getElementById('btn-load-preset'),
-            btnResetDefaults: document.getElementById('btn-reset-defaults'),
-            graphicsQuality: document.getElementById('graphics-quality'),
             woodCount: document.getElementById('count-wood'),
             stoneCount: document.getElementById('count-stone'),
-            valCameraDistance: document.getElementById("val-camera-distance"),
-            valCameraHeight: document.getElementById("val-camera-height"),
-            valCameraOffset: document.getElementById("val-camera-offset"),
-            valTerrainSize: document.getElementById("val-terrain-size"),
-            valTerrainQuality: document.getElementById("val-terrain-quality"),
-            valTerrainDepth: document.getElementById("val-terrain-depth"),
-            valWaterOpacity: document.getElementById("val-water-opacity"),
-            buildList: document.getElementById('build-list'),
-            // Character & Animations
             charPreviewContainer: document.getElementById('character-preview-container'),
             charModelUpload: document.getElementById('char-model-upload'),
             animIdleUpload: document.getElementById('anim-idle-upload'),
@@ -57,7 +20,6 @@ export class UIManager {
             animRunUpload: document.getElementById('anim-run-upload'),
             animJumpUpload: document.getElementById('anim-jump-upload'),
             btnResetCharacter: document.getElementById('btn-reset-character'),
-            // Modal
             modal: document.getElementById('global-modal'),
             modalTitle: document.getElementById('modal-title'),
             modalMessage: document.getElementById('modal-message'),
@@ -66,31 +28,24 @@ export class UIManager {
         };
 
         this.preview = {
-            scene: null,
-            camera: null,
-            renderer: null,
-            model: null,
-            mixer: null,
-            clock: new THREE.Clock()
+            scene: null, camera: null, renderer: null, model: null, mixer: null, clock: new THREE.Clock()
         };
 
         this.init();
         this.initCharacterPreview();
+        this.game.player.onModelReady = () => this.updatePreviewModel();
     }
 
     init() {
         if (this.elements.settingsToggle) {
             this.elements.settingsToggle.addEventListener('click', () => {
                 const isOpen = this.elements.settingsMenu.classList.toggle('open');
-                this.elements.settingsToggle.classList.toggle('sidebar-open', isOpen);
                 if (this.elements.menuOverlay) this.elements.menuOverlay.classList.toggle('active', isOpen);
                 this.game.engine.isInteractingWithUI = isOpen;
-
                 if (isOpen) {
                     this.elements.menuOverlay.onclick = () => {
                         this.elements.settingsMenu.classList.remove('open');
                         this.elements.menuOverlay.classList.remove('active');
-                        this.elements.settingsToggle.classList.remove('sidebar-open');
                         this.game.engine.isInteractingWithUI = false;
                     };
                 }
@@ -102,17 +57,20 @@ export class UIManager {
                 this.elements.tabButtons.forEach(b => b.classList.remove('active'));
                 this.elements.tabContents.forEach(c => c.classList.remove('active'));
                 btn.classList.add('active');
-                const target = document.getElementById(btn.dataset.tab);
+                const targetId = btn.getAttribute('data-tab');
+                const target = document.getElementById(targetId);
                 if (target) {
                     target.classList.add('active');
-                    if (btn.dataset.tab === 'tab-personagem') {
-                        setTimeout(() => this.resizePreview(), 50);
+                    if (targetId === 'tab-personagem') {
+                        setTimeout(() => {
+                            this.resizePreview();
+                            this.updatePreviewModel();
+                        }, 50);
                     }
                 }
             });
         });
 
-        // Animation and Model Uploads
         const handleUpload = (element, callback) => {
             if (!element) return;
             element.addEventListener('change', (e) => {
@@ -121,10 +79,8 @@ export class UIManager {
                     const reader = new FileReader();
                     reader.onload = (event) => callback(event.target.result, file.name);
                     reader.readAsArrayBuffer(file);
-
-                    // Update label text
                     const span = element.parentElement.querySelector('span');
-                    if (span) span.innerText = `✔️ ${file.name.substring(0, 15)}...`;
+                    if (span) span.innerText = `✔️ ${file.name.substring(0, 10)}...`;
                 }
             });
         };
@@ -145,209 +101,58 @@ export class UIManager {
                 setTimeout(() => this.updatePreviewModel(), 1000);
             });
         }
+    }
 
-        // Time
-        if (this.elements.realTimeToggle) {
-            this.elements.realTimeToggle.addEventListener('change', (e) => {
-                Settings.time.useRealTime = e.target.checked;
-                const manual = document.getElementById('manual-time-controls');
-                if (manual) manual.style.display = e.target.checked ? 'none' : 'block';
-            });
-        }
-        if (this.elements.timeFreezeToggle) {
-            this.elements.timeFreezeToggle.addEventListener('change', (e) => Settings.time.frozen = e.target.checked);
-        }
-        if (this.elements.timeSlider) {
-            this.elements.timeSlider.addEventListener('input', (e) => Settings.time.timeOfDay = parseFloat(e.target.value));
-        }
-        if (this.elements.timeSpeed) {
-            this.elements.timeSpeed.addEventListener('input', (e) => Settings.time.timeSpeed = parseFloat(e.target.value));
-        }
-
-        // Camera
-        if (this.elements.cameraMode) {
-            this.elements.cameraMode.addEventListener('change', (e) => {
-                Settings.camera.mode = e.target.value;
-                if (e.target.value === 'firstperson') {
-                    this.game.engine.renderer.domElement.requestPointerLock();
-                }
-            });
-        }
-        if (this.elements.cameraDistance) {
-            this.elements.cameraDistance.addEventListener('input', (e) => {
-                Settings.camera.distance = parseFloat(e.target.value); if(this.elements.valCameraDistance) this.elements.valCameraDistance.innerText = e.target.value;
-            });
-        }
-        if (this.elements.cameraHeight) {
-            this.elements.cameraHeight.addEventListener('input', (e) => {
-                Settings.camera.height = parseFloat(e.target.value); if(this.elements.valCameraHeight) this.elements.valCameraHeight.innerText = e.target.value;
-            });
-        }
-        if (this.elements.cameraOffset) {
-            this.elements.cameraOffset.addEventListener('input', (e) => {
-                Settings.camera.verticalOffset = parseFloat(e.target.value); if(this.elements.valCameraOffset) this.elements.valCameraOffset.innerText = parseFloat(e.target.value).toFixed(1);
-            });
-        }
-
-        // Terrain
-        if (this.elements.terrainSize) {
-            this.elements.terrainSize.addEventListener('input', (e) => {
-                Settings.terrain.size = parseInt(e.target.value); if(this.elements.valTerrainSize) this.elements.valTerrainSize.innerText = e.target.value;
-            });
-            this.elements.terrainSize.addEventListener('change', (e) => {
-                this.game.terrain.init();
-            });
-        }
-        if (this.elements.terrainQuality) {
-            this.elements.terrainQuality.addEventListener('input', (e) => {
-                Settings.terrain.quality = parseInt(e.target.value); if(this.elements.valTerrainQuality) this.elements.valTerrainQuality.innerText = e.target.value;
-            });
-            this.elements.terrainQuality.addEventListener('change', (e) => {
-            this.game.terrain.init();
-            });
-        }
-        if (this.elements.terrainTriangulate) {
-            this.elements.terrainTriangulate.addEventListener('change', (e) => {
-                Settings.terrain.triangulated = e.target.checked;
-                this.game.terrain.updateVisuals();
-            });
-        }
-        if (this.elements.terrainDepth) {
-            this.elements.terrainDepth.addEventListener('input', (e) => {
-                Settings.terrain.seaDepth = parseFloat(e.target.value); if(this.elements.valTerrainDepth) this.elements.valTerrainDepth.innerText = e.target.value;
-                this.game.terrain.init();
-            });
-        }
-        if (this.elements.waterOpacity) {
-            this.elements.waterOpacity.addEventListener('input', (e) => {
-                Settings.water.opacity = parseFloat(e.target.value); if(this.elements.valWaterOpacity) this.elements.valWaterOpacity.innerText = parseFloat(e.target.value).toFixed(2);
-                this.game.terrain.updateVisuals();
-            });
-        }
-
-        // Colors
-        const updateColor = (category, key, e) => {
-            Settings[category].colors[key].set(e.target.value);
-            if (category === 'terrain') this.game.terrain.updateVisuals();
-        };
-        if (this.elements.colorMidnight) this.elements.colorMidnight.addEventListener('input', (e) => updateColor('time', 'midnight', e));
-        if (this.elements.colorDawn) this.elements.colorDawn.addEventListener('input', (e) => updateColor('time', 'dawn', e));
-        if (this.elements.colorNoon) this.elements.colorNoon.addEventListener('input', (e) => updateColor('time', 'noon', e));
-        if (this.elements.colorSunset) this.elements.colorSunset.addEventListener('input', (e) => updateColor('time', 'sunset', e));
-        if (this.elements.colorSea) this.elements.colorSea.addEventListener('input', (e) => updateColor('terrain', 'sea', e));
-        if (this.elements.colorDirt) this.elements.colorDirt.addEventListener('input', (e) => updateColor('terrain', 'dirt', e));
-        if (this.elements.colorGrass) this.elements.colorGrass.addEventListener('input', (e) => updateColor('terrain', 'grass', e));
-        if (this.elements.colorUnderwater) this.elements.colorUnderwater.addEventListener('input', (e) => updateColor('terrain', 'underwater', e));
-
-        // Presets
-        if (this.elements.btnSavePreset) {
-            this.elements.btnSavePreset.addEventListener('click', () => {
-                this.showModal("Santuário", "Deseja salvar suas configurações atuais?", () => {
-                    localStorage.setItem('rpg_medieval_save', JSON.stringify(this.getPreset()));
-                });
-            });
-        }
-
-        if (this.elements.btnLoadPreset) {
-            this.elements.btnLoadPreset.addEventListener('click', () => {
-                const data = localStorage.getItem('rpg_medieval_save');
-                if (data) {
-                    this.showModal("Restaurar", "Carregar progresso salvo?", () => {
-                        this.applyPreset(JSON.parse(data));
-                    });
-                } else {
-                    this.showModal("Erro", "Nenhum dado salvo encontrado.", null, false);
-                }
-            });
-        }
-
-        if (this.elements.btnResetDefaults) {
-            this.elements.btnResetDefaults.addEventListener('click', () => {
-                this.showModal("Reiniciar", "Todas as configurações e progresso serão perdidos. Confirmar?", () => {
-                    localStorage.removeItem('rpg_medieval_save');
-                    location.reload();
-                });
-            });
-        }
-
-        if (this.elements.graphicsQuality) {
-            this.elements.graphicsQuality.addEventListener('change', (e) => {
-                const q = e.target.value;
-                import('../core/Settings.js').then(({ Settings, GraphicsQuality }) => {
-                    Settings.graphics.quality = q;
-                    const config = GraphicsQuality[q];
-
-                    Settings.terrain.quality = config.terrainQuality;
-                    Settings.resources.maxTrees = Math.floor(80 * config.resourceDensity);
-                    Settings.resources.maxRocks = Math.floor(50 * config.resourceDensity);
-
-                    this.game.terrain.init();
-                    if (this.game.environment.stars) {
-                        this.game.engine.scene.remove(this.game.environment.stars);
-                        this.game.environment.initStars();
-                    }
-
-                    const sun = this.game.environment.sunLight;
-                    sun.shadow.mapSize.set(config.shadowRes, config.shadowRes);
-                    sun.shadow.map.dispose();
-                    sun.shadow.map = null;
-                });
-            });
-        }
-        this.syncUI();
+    resizePreview() {
+        if (!this.elements.charPreviewContainer || !this.preview.renderer) return;
+        const width = this.elements.charPreviewContainer.clientWidth || 310;
+        const height = this.elements.charPreviewContainer.clientHeight || 400;
+        this.preview.camera.aspect = width / height;
+        this.preview.camera.updateProjectionMatrix();
+        this.preview.renderer.setSize(width, height);
     }
 
     initCharacterPreview() {
         if (!this.elements.charPreviewContainer) return;
-
-        const width = this.elements.charPreviewContainer.clientWidth;
-        const height = this.elements.charPreviewContainer.clientHeight;
-
+        const width = 310; const height = 400;
         this.preview.scene = new THREE.Scene();
         this.preview.scene.background = new THREE.Color(0x050505);
-
         this.preview.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-        this.preview.camera.position.set(0, 1.1, 4.0);
-        this.preview.camera.lookAt(0, 1.1, 0);
-
+        this.preview.camera.position.set(0, 1.2, 3.0);
+        this.preview.camera.lookAt(0, 1.0, 0);
         this.preview.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.preview.renderer.setSize(width, height);
         this.preview.renderer.setPixelRatio(window.devicePixelRatio);
         this.elements.charPreviewContainer.appendChild(this.preview.renderer.domElement);
-
-        const ambient = new THREE.AmbientLight(0xffffff, 0.7);
-        this.preview.scene.add(ambient);
-
-        const sun = new THREE.DirectionalLight(0xffffff, 1);
+        this.preview.scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+        const sun = new THREE.DirectionalLight(0xffffff, 1.0);
         sun.position.set(5, 10, 5);
         this.preview.scene.add(sun);
-
         const animate = () => {
             requestAnimationFrame(animate);
             const delta = this.preview.clock.getDelta();
             if (this.preview.mixer) this.preview.mixer.update(delta);
-            if (this.preview.model) this.preview.model.rotation.y += delta * 0.5;
+            if (this.preview.model) this.preview.model.rotation.y += delta * 0.4;
             this.preview.renderer.render(this.preview.scene, this.preview.camera);
         };
         animate();
-
-        setTimeout(() => this.updatePreviewModel(), 1000);
     }
 
     updatePreviewModel() {
         if (!this.game.player.model) return;
         if (this.preview.model) this.preview.scene.remove(this.preview.model);
-
         this.preview.model = this.game.player.model.clone();
         this.preview.model.position.set(0, 0, 0);
         this.preview.model.scale.set(1, 1, 1);
         this.preview.scene.add(this.preview.model);
-
         this.preview.mixer = new THREE.AnimationMixer(this.preview.model);
         const animations = this.game.player.rawAnimations;
         if (animations && animations.length > 0) {
-            const idle = animations.find(a => a.name.toLowerCase().includes('idle')) || animations[0];
-            this.preview.mixer.clipAction(idle).play();
+            const idle = animations.find(a => a.name === 'idle') ||
+                         animations.find(a => a.name.toLowerCase().includes('idle')) ||
+                         animations[0];
+            const action = this.preview.mixer.clipAction(idle);
+            action.reset().play();
         }
     }
 
@@ -357,76 +162,17 @@ export class UIManager {
         this.elements.modalMessage.innerText = message;
         this.elements.modalCancel.style.display = showCancel ? 'block' : 'none';
         this.elements.modal.classList.add('active');
-        const close = () => {
-            this.elements.modal.classList.remove('active');
-            this.elements.modalConfirm.onclick = null;
-        };
+        const close = () => this.elements.modal.classList.remove('active');
         this.elements.modalConfirm.onclick = () => { if (onConfirm) onConfirm(); close(); };
         this.elements.modalCancel.onclick = close;
-    }
-
-    getPreset() {
-        const p = JSON.parse(JSON.stringify(Settings));
-        p.time.colors = {
-            midnight: Settings.time.colors.midnight.getHexString(),
-            dawn: Settings.time.colors.dawn.getHexString(),
-            noon: Settings.time.colors.noon.getHexString(),
-            sunset: Settings.time.colors.sunset.getHexString()
-        };
-        return p;
-    }
-
-    applyPreset(p) {
-        Object.keys(p.time).forEach(k => { if (k !== 'colors') Settings.time[k] = p.time[k]; });
-        Settings.time.colors.midnight.set('#' + p.time.colors.midnight);
-        Settings.time.colors.dawn.set('#' + p.time.colors.dawn);
-        Settings.time.colors.noon.set('#' + p.time.colors.noon);
-        Settings.time.colors.sunset.set('#' + p.time.colors.sunset);
-        this.game.terrain.init();
-        this.syncUI();
-    }
-
-    syncUI() {
-        if (this.elements.realTimeToggle) this.elements.realTimeToggle.checked = Settings.time.useRealTime;
-        if (this.elements.timeSlider) this.elements.timeSlider.value = Settings.time.timeOfDay;
-        if (this.elements.cameraMode) this.elements.cameraMode.value = Settings.camera.mode;
-        if (this.elements.cameraDistance) this.elements.cameraDistance.value = Settings.camera.distance;
-        if (this.elements.cameraHeight) this.elements.cameraHeight.value = Settings.camera.height;
-        if (this.elements.cameraOffset) this.elements.cameraOffset.value = Settings.camera.verticalOffset;
-        if (this.elements.terrainSize) this.elements.terrainSize.value = Settings.terrain.size;
-        if (this.elements.terrainQuality) this.elements.terrainQuality.value = Settings.terrain.quality;
-        if (this.elements.terrainDepth) this.elements.terrainDepth.value = Settings.terrain.seaDepth;
-        if (this.elements.waterOpacity) this.elements.waterOpacity.value = Settings.water.opacity;
-        if (this.elements.graphicsQuality) this.elements.graphicsQuality.value = Settings.graphics.quality;
-
-        if (this.elements.valCameraDistance) this.elements.valCameraDistance.innerText = Settings.camera.distance;
-        if (this.elements.valCameraHeight) this.elements.valCameraHeight.innerText = Settings.camera.height;
-        if (this.elements.valCameraOffset) this.elements.valCameraOffset.innerText = Settings.camera.verticalOffset.toFixed(1);
-        if (this.elements.valTerrainSize) this.elements.valTerrainSize.innerText = Settings.terrain.size;
-        if (this.elements.valTerrainQuality) this.elements.valTerrainQuality.innerText = Settings.terrain.quality;
-        if (this.elements.valTerrainDepth) this.elements.valTerrainDepth.innerText = Settings.terrain.seaDepth;
-        if (this.elements.valWaterOpacity) this.elements.valWaterOpacity.innerText = Settings.water.opacity.toFixed(2);
-
-        const manual = document.getElementById('manual-time-controls');
-        if (manual) manual.style.display = Settings.time.useRealTime ? 'none' : 'block';
-
-        if (this.elements.colorSea) this.elements.colorSea.value = '#' + Settings.terrain.colors.sea.getHexString();
-        if (this.elements.colorDirt) this.elements.colorDirt.value = '#' + Settings.terrain.colors.dirt.getHexString();
-        if (this.elements.colorGrass) this.elements.colorGrass.value = '#' + Settings.terrain.colors.grass.getHexString();
-        if (this.elements.colorUnderwater) this.elements.colorUnderwater.value = '#' + Settings.terrain.colors.underwater.getHexString();
     }
 
     update() {
         const inv = this.game.player.inventory;
         if (this.elements.woodCount) this.elements.woodCount.innerText = inv.wood || 0;
         if (this.elements.stoneCount) this.elements.stoneCount.innerText = inv.stone || 0;
-
         const h = Math.floor(Settings.time.timeOfDay);
         const m = Math.floor((Settings.time.timeOfDay % 1) * 60);
         if (this.elements.timeDisplay) this.elements.timeDisplay.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-
-        if (!this.game.engine.isInteractingWithUI && this.elements.timeSlider) {
-             this.elements.timeSlider.value = Settings.time.timeOfDay;
-        }
     }
 }

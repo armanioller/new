@@ -52,6 +52,7 @@ export class UIManager {
             // Character & Animations
             charPreviewContainer: document.getElementById('character-preview-container'),
             charModelUpload: document.getElementById('char-model-upload'),
+            animIdleUpload: document.getElementById('anim-idle-upload'),
             animWalkUpload: document.getElementById('anim-walk-upload'),
             animRunUpload: document.getElementById('anim-run-upload'),
             animJumpUpload: document.getElementById('anim-jump-upload'),
@@ -102,7 +103,12 @@ export class UIManager {
                 this.elements.tabContents.forEach(c => c.classList.remove('active'));
                 btn.classList.add('active');
                 const target = document.getElementById(btn.dataset.tab);
-                if (target) target.classList.add('active');
+                if (target) {
+                    target.classList.add('active');
+                    if (btn.dataset.tab === 'tab-personagem') {
+                        setTimeout(() => this.resizePreview(), 50);
+                    }
+                }
             });
         });
 
@@ -128,6 +134,7 @@ export class UIManager {
             setTimeout(() => this.updatePreviewModel(), 500);
         });
 
+        handleUpload(this.elements.animIdleUpload, (buffer, name) => this.game.player.loadCustomAnimation(buffer, name, 'idle'));
         handleUpload(this.elements.animWalkUpload, (buffer, name) => this.game.player.loadCustomAnimation(buffer, name, 'walking'));
         handleUpload(this.elements.animRunUpload, (buffer, name) => this.game.player.loadCustomAnimation(buffer, name, 'running'));
         handleUpload(this.elements.animJumpUpload, (buffer, name) => this.game.player.loadCustomAnimation(buffer, name, 'jump'));
@@ -300,8 +307,8 @@ export class UIManager {
         this.preview.scene.background = new THREE.Color(0x050505);
 
         this.preview.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-        this.preview.camera.position.set(0, 1.2, 3.5);
-        this.preview.camera.lookAt(0, 1, 0);
+        this.preview.camera.position.set(0, 1.1, 4.0);
+        this.preview.camera.lookAt(0, 1.1, 0);
 
         this.preview.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.preview.renderer.setSize(width, height);

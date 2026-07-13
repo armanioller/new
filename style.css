@@ -154,18 +154,19 @@ body {
 
 .sidebar-content {
     flex: 1;
-    overflow-y: auto;
-    padding: 25px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 25px;
+    overflow: hidden;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .tab-content {
     display: none;
-    grid-column: 1 / span 2;
+    padding: 25px;
     grid-template-columns: 1fr 1fr;
     gap: 25px;
+    height: 100%;
+    overflow-y: auto;
 }
 .tab-content.active { display: grid; }
 
@@ -398,4 +399,97 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 @media (max-width: 720px) {
     .central-menu-modal { width: 98vw; height: 98vh; }
     .sidebar-content, .tab-content.active { grid-template-columns: 1fr; }
+}
+
+/* FIXED PREVIEW / SCROLLABLE SETTINGS FOR CHARACTER TAB */
+#tab-personagem {
+    display: none; /* Default hidden */
+    grid-template-columns: 320px 1fr; /* Fixed width for preview, rest for settings */
+    height: 100%;
+    overflow: hidden;
+}
+
+#tab-personagem.active {
+    display: grid;
+}
+
+#tab-personagem .settings-group:first-child {
+    grid-column: 1;
+    position: sticky;
+    top: 0;
+    height: fit-content;
+}
+
+#tab-personagem .scrollable-group {
+    grid-column: 2;
+    overflow-y: auto;
+    max-height: 400px; /* Adjust based on modal height */
+    padding-right: 15px;
+}
+
+/* Ensure HUD panels are solid */
+.hud-panel {
+    background: #000 !important;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+}
+
+/* REFINED CHARACTER TAB LAYOUT */
+#tab-personagem.active {
+    display: flex !important;
+    padding: 0 !important;
+    height: 100%;
+}
+
+.char-tab-layout {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+.char-preview-column {
+    flex: 0 0 350px;
+    padding: 20px;
+    background: #050505;
+    border-right: 1px solid var(--gold-dim);
+}
+
+.char-settings-column {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+#character-preview-container {
+    width: 100%;
+    height: 450px;
+    background: #000;
+    border: 1px solid #222;
+}
+
+/* FIX GHOSTING BEHIND HUD */
+.hud-panel, #hud-top-center, .central-menu-modal {
+    background: #000 !important;
+    background-image: none !important;
+    backdrop-filter: none !important;
+}
+
+/* Fix minimap to be strictly square and opaque */
+#minimap-container {
+    background: #000 !important;
+    border: 2px solid var(--gold);
+}
+
+/* Specific Tab Fixes */
+#tab-personagem {
+    padding: 0 !important;
+    overflow: hidden !important;
+    display: none;
+}
+#tab-personagem.active {
+    display: flex !important;
+}
+
+#tab-personagem .settings-group {
+    margin-bottom: 20px;
 }

@@ -1,0 +1,52 @@
+            <div id="tab-personagem" class="tab-content">
+                <div class="char-tab-layout">
+                    <div class="char-preview-column">
+                        <div class="settings-group">
+                            <h3>Prévia do Herói</h3>
+                            <div id="character-preview-container" class="preview-box"></div>
+                            <button id="btn-reset-character" class="btn secondary full" style="width:100%; margin-top:10px;">Restaurar Padrão</button>
+                        </div>
+                    </div>
+                    <div class="char-settings-column">
+                        <div class="settings-group">
+                            <h3>Modelo Principal (.glb / .fbx)</h3>
+                            <label class="custom-file-upload">
+                                <input type="file" id="char-model-upload" class="file-input-hidden" accept=".glb,.fbx">
+                                <span>ESCOLHER MODELO</span>
+                            </label>
+                        </div>
+
+                        <div class="settings-group">
+                            <h3>Animações (FBX/GLB)</h3>
+                            <div class="setting-row vertical">
+                                <label>Parado (Idle)</label>
+                                <label class="custom-file-upload">
+                                    <input type="file" id="anim-idle-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                    <span>IMPORTAR IDLE</span>
+                                </label>
+                            </div>
+                            <div class="setting-row vertical">
+                                <label>Caminhar (Walk)</label>
+                                <label class="custom-file-upload">
+                                    <input type="file" id="anim-walk-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                    <span>IMPORTAR WALK</span>
+                                </label>
+                            </div>
+                            <div class="setting-row vertical">
+                                <label>Correr (Run)</label>
+                                <label class="custom-file-upload">
+                                    <input type="file" id="anim-run-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                    <span>IMPORTAR RUN</span>
+                                </label>
+                            </div>
+                            <div class="setting-row vertical">
+                                <label>Pulo (Jump)</label>
+                                <label class="custom-file-upload">
+                                    <input type="file" id="anim-jump-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                    <span>IMPORTAR JUMP</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>

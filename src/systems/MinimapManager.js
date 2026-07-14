@@ -25,7 +25,7 @@ export class MinimapManager {
 
     init() {
         if (!this.canvas) return;
-        const size = 228;
+        const size = 152;
         this.canvas.width = size;
         this.canvas.height = size;
         setTimeout(() => this.renderTerrain(), 3000);

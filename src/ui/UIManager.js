@@ -114,7 +114,7 @@ export class UIManager {
 
     initCharacterPreview() {
         if (!this.elements.charPreviewContainer) return;
-        const width = 310; const height = 400;
+        const width = this.elements.charPreviewContainer.clientWidth || 320; const height = 450;
         this.preview.scene = new THREE.Scene();
         this.preview.scene.background = new THREE.Color(0x050505);
         this.preview.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
@@ -143,7 +143,6 @@ export class UIManager {
         if (this.preview.model) this.preview.scene.remove(this.preview.model);
         this.preview.model = this.game.player.model.clone();
         this.preview.model.position.set(0, 0, 0);
-        this.preview.model.scale.set(1, 1, 1);
         this.preview.scene.add(this.preview.model);
         this.preview.mixer = new THREE.AnimationMixer(this.preview.model);
         const animations = this.game.player.rawAnimations;

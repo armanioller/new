@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RPG Medieval 3D - Low Poly</title>
+    <!-- Fix for "three" module resolution -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.174.0/build/three.module.js",
+            "three/examples/jsm/": "https://unpkg.com/three@0.174.0/examples/jsm/"
+        }
+    }
+    </script>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
 </head>
@@ -11,7 +20,6 @@
     <div id="game-container">
         <canvas id="game-canvas"></canvas>
 
-        <!-- SOLID HUD: Bag (Top Left) -->
         <div id="hud-top-left" class="hud-panel">
             <div class="hud-header">MOCHILA</div>
             <div class="resource-item">
@@ -25,7 +33,7 @@
         </div>
 
         <div id="hud-top-center">
-            <span id="time-display">13:14</span>
+            <span id="time-display">12:00</span>
         </div>
 
         <button id="settings-toggle" class="ui-icon-button">
@@ -48,7 +56,6 @@
             </div>
 
             <div class="sidebar-content">
-                <!-- Ambiente -->
                 <div id="tab-ambiente" class="tab-content active">
                     <div class="tab-grid">
                         <div class="settings-group">
@@ -64,7 +71,6 @@
                     </div>
                 </div>
 
-                <!-- Câmera -->
                 <div id="tab-camera" class="tab-content">
                     <div class="tab-grid">
                         <div class="settings-group">
@@ -80,7 +86,6 @@
                     </div>
                 </div>
 
-                <!-- Personagem -->
                 <div id="tab-personagem" class="tab-content">
                     <div class="char-tab-layout">
                         <div class="char-preview-column">
@@ -134,7 +139,6 @@
                     </div>
                 </div>
 
-                <!-- Abas vazias para preenchimento posterior -->
                 <div id="tab-construcao" class="tab-content"><div class="tab-grid"></div></div>
                 <div id="tab-terreno" class="tab-content"><div class="tab-grid"></div></div>
                 <div id="tab-presets" class="tab-content">
@@ -147,7 +151,7 @@
             </div>
         </div>
 
-        <!-- SQUARED MINIMAP -->
+        <!-- REDUCED MINIMAP CONTAINER -->
         <div id="minimap-container" class="hud-panel">
             <div class="minimap-frame">
                 <canvas id="minimap-canvas"></canvas>

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RPG Medieval 3D - Low Poly</title>
-    <!-- Fix for "three" module resolution -->
     <script type="importmap">
     {
         "imports": {
@@ -20,160 +19,162 @@
     <div id="game-container">
         <canvas id="game-canvas"></canvas>
 
-        <div id="hud-top-left" class="hud-panel">
-            <div class="hud-header">MOCHILA</div>
-            <div class="resource-item">
-                <span class="icon">🪵</span>
-                <span id="count-wood" class="value">0</span>
-            </div>
-            <div class="resource-item">
-                <span class="icon">🪨</span>
-                <span id="count-stone" class="value">0</span>
-            </div>
-        </div>
-
-        <div id="hud-top-center">
-            <span id="time-display">12:00</span>
-        </div>
-
-        <button id="settings-toggle" class="ui-icon-button">
-            <span class="icon">⚙️</span>
-        </button>
-
-        <div id="menu-overlay"></div>
-        <div id="settings-menu" class="central-menu-modal">
-            <div class="sidebar-header">
-                <h2>CONFIGURAÇÕES</h2>
+        <!-- UI LAYER FOR BROAD INTERACTION IF NEEDED -->
+        <div id="ui-layer">
+            <div id="hud-top-left" class="hud-panel">
+                <div class="hud-header">MOCHILA</div>
+                <div class="resource-item">
+                    <span class="icon">🪵</span>
+                    <span id="count-wood" class="value">0</span>
+                </div>
+                <div class="resource-item">
+                    <span class="icon">🪨</span>
+                    <span id="count-stone" class="value">0</span>
+                </div>
             </div>
 
-            <div class="tabs">
-                <button class="tab-btn active" data-tab="tab-ambiente">Ambiente</button>
-                <button class="tab-btn" data-tab="tab-camera">Câmera</button>
-                <button class="tab-btn" data-tab="tab-construcao">Construção</button>
-                <button class="tab-btn" data-tab="tab-personagem">Personagem</button>
-                <button class="tab-btn" data-tab="tab-terreno">Terreno</button>
-                <button class="tab-btn" data-tab="tab-presets">Sistema</button>
+            <div id="hud-top-center">
+                <span id="time-display">12:00</span>
             </div>
 
-            <div class="sidebar-content">
-                <div id="tab-ambiente" class="tab-content active">
-                    <div class="tab-grid">
-                        <div class="settings-group">
-                            <h3>Controle do Tempo</h3>
-                            <div class="setting-row">
-                                <label class="switch">
-                                    <input type="checkbox" id="real-time-toggle">
-                                    <span class="slider"></span>
-                                </label>
-                                <span>Tempo Real</span>
-                            </div>
-                        </div>
-                    </div>
+            <button id="settings-toggle" class="ui-icon-button">
+                <span class="icon">⚙️</span>
+            </button>
+
+            <div id="menu-overlay"></div>
+            <div id="settings-menu" class="central-menu-modal">
+                <div class="sidebar-header">
+                    <h2>CONFIGURAÇÕES</h2>
                 </div>
 
-                <div id="tab-camera" class="tab-content">
-                    <div class="tab-grid">
-                        <div class="settings-group">
-                            <h3>Visão</h3>
-                            <div class="setting-row vertical">
-                                <label>Câmera</label>
-                                <select id="camera-mode" class="medieval-select">
-                                    <option value="isometric">Isométrica</option>
-                                    <option value="thirdperson">Terceira Pessoa</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="tab-ambiente">Ambiente</button>
+                    <button class="tab-btn" data-tab="tab-camera">Câmera</button>
+                    <button class="tab-btn" data-tab="tab-construcao">Construção</button>
+                    <button class="tab-btn" data-tab="tab-personagem">Personagem</button>
+                    <button class="tab-btn" data-tab="tab-terreno">Terreno</button>
+                    <button class="tab-btn" data-tab="tab-presets">Sistema</button>
                 </div>
 
-                <div id="tab-personagem" class="tab-content">
-                    <div class="char-tab-layout">
-                        <div class="char-preview-column">
+                <div class="sidebar-content">
+                    <div id="tab-ambiente" class="tab-content active">
+                        <div class="tab-grid">
                             <div class="settings-group">
-                                <h3>PRÉVIA DO HERÓI</h3>
-                                <div id="character-preview-container"></div>
-                                <button id="btn-reset-character" class="btn secondary full">RESTAURAR PADRÃO</button>
-                            </div>
-                        </div>
-                        <div class="char-settings-column">
-                            <div class="settings-group">
-                                <h3>MODELO BASE (.GLB/FBX)</h3>
-                                <label class="custom-file-upload">
-                                    <input type="file" id="char-model-upload" class="file-input-hidden" accept=".glb,.fbx">
-                                    <span>📁 SELECIONAR MODELO</span>
-                                </label>
-                            </div>
-
-                            <div class="settings-group">
-                                <h3>IMPORTAR ANIMAÇÕES</h3>
-                                <div class="setting-row vertical">
-                                    <label>PARADO (IDLE)</label>
-                                    <label class="custom-file-upload">
-                                        <input type="file" id="anim-idle-upload" class="file-input-hidden" accept=".fbx,.glb">
-                                        <span>📁 SELECIONAR IDLE</span>
+                                <h3>Controle do Tempo</h3>
+                                <div class="setting-row">
+                                    <label class="switch">
+                                        <input type="checkbox" id="real-time-toggle">
+                                        <span class="slider"></span>
                                     </label>
-                                </div>
-                                <div class="setting-row vertical">
-                                    <label>CAMINHAR (WALK)</label>
-                                    <label class="custom-file-upload">
-                                        <input type="file" id="anim-walk-upload" class="file-input-hidden" accept=".fbx,.glb">
-                                        <span>📁 SELECIONAR WALK</span>
-                                    </label>
-                                </div>
-                                <div class="setting-row vertical">
-                                    <label>CORRER (RUN)</label>
-                                    <label class="custom-file-upload">
-                                        <input type="file" id="anim-run-upload" class="file-input-hidden" accept=".fbx,.glb">
-                                        <span>📁 SELECIONAR RUN</span>
-                                    </label>
-                                </div>
-                                <div class="setting-row vertical">
-                                    <label>PULO (JUMP)</label>
-                                    <label class="custom-file-upload">
-                                        <input type="file" id="anim-jump-upload" class="file-input-hidden" accept=".fbx,.glb">
-                                        <span>📁 SELECIONAR JUMP</span>
-                                    </label>
+                                    <span>Tempo Real</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div id="tab-construcao" class="tab-content"><div class="tab-grid"></div></div>
-                <div id="tab-terreno" class="tab-content"><div class="tab-grid"></div></div>
-                <div id="tab-presets" class="tab-content">
-                    <div class="tab-grid">
-                        <div class="settings-group">
-                            <button id="btn-reset-defaults" class="btn danger full">REINICIAR JOGO</button>
+                    <div id="tab-camera" class="tab-content">
+                        <div class="tab-grid">
+                            <div class="settings-group">
+                                <h3>Visão</h3>
+                                <div class="setting-row vertical">
+                                    <label>Câmera</label>
+                                    <select id="camera-mode" class="medieval-select">
+                                        <option value="isometric">Isométrica</option>
+                                        <option value="thirdperson">Terceira Pessoa</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-personagem" class="tab-content">
+                        <div class="char-tab-layout">
+                            <div class="char-preview-column">
+                                <div class="settings-group">
+                                    <h3>PRÉVIA DO HERÓI</h3>
+                                    <div id="character-preview-container"></div>
+                                    <button id="btn-reset-character" class="btn secondary full">RESTAURAR PADRÃO</button>
+                                </div>
+                            </div>
+                            <div class="char-settings-column">
+                                <div class="settings-group">
+                                    <h3>MODELO BASE (.GLB/FBX)</h3>
+                                    <label class="custom-file-upload">
+                                        <input type="file" id="char-model-upload" class="file-input-hidden" accept=".glb,.fbx">
+                                        <span>📁 SELECIONAR MODELO</span>
+                                    </label>
+                                </div>
+
+                                <div class="settings-group">
+                                    <h3>IMPORTAR ANIMAÇÕES</h3>
+                                    <div class="setting-row vertical">
+                                        <label>PARADO (IDLE)</label>
+                                        <label class="custom-file-upload">
+                                            <input type="file" id="anim-idle-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                            <span>📁 SELECIONAR IDLE</span>
+                                        </label>
+                                    </div>
+                                    <div class="setting-row vertical">
+                                        <label>CAMINHAR (WALK)</label>
+                                        <label class="custom-file-upload">
+                                            <input type="file" id="anim-walk-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                            <span>📁 SELECIONAR WALK</span>
+                                        </label>
+                                    </div>
+                                    <div class="setting-row vertical">
+                                        <label>CORRER (RUN)</label>
+                                        <label class="custom-file-upload">
+                                            <input type="file" id="anim-run-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                            <span>📁 SELECIONAR RUN</span>
+                                        </label>
+                                    </div>
+                                    <div class="setting-row vertical">
+                                        <label>PULO (JUMP)</label>
+                                        <label class="custom-file-upload">
+                                            <input type="file" id="anim-jump-upload" class="file-input-hidden" accept=".fbx,.glb">
+                                            <span>📁 SELECIONAR JUMP</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-construcao" class="tab-content"><div class="tab-grid"></div></div>
+                    <div id="tab-terreno" class="tab-content"><div class="tab-grid"></div></div>
+                    <div id="tab-presets" class="tab-content">
+                        <div class="tab-grid">
+                            <div class="settings-group">
+                                <button id="btn-reset-defaults" class="btn danger full">REINICIAR JOGO</button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- REDUCED MINIMAP CONTAINER -->
-        <div id="minimap-container" class="hud-panel">
-            <div class="minimap-frame">
-                <canvas id="minimap-canvas"></canvas>
-                <div id="minimap-player-marker"></div>
-                <div class="compass-marker N">N</div>
-                <div class="compass-marker S">S</div>
-                <div class="compass-marker E">L</div>
-                <div class="compass-marker W">O</div>
+            <div id="minimap-container" class="hud-panel">
+                <div class="minimap-frame">
+                    <canvas id="minimap-canvas"></canvas>
+                    <div id="minimap-player-marker"></div>
+                    <div class="compass-marker N">N</div>
+                    <div class="compass-marker S">S</div>
+                    <div class="compass-marker E">L</div>
+                    <div class="compass-marker W">O</div>
+                </div>
             </div>
-        </div>
 
-        <div id="help-hint">
-            [F] COLHER | [B] CONSTRUIR | [ESPAÇO] PULAR
-        </div>
+            <div id="help-hint">
+                [F] COLHER | [B] CONSTRUIR | [ESPAÇO] PULAR
+            </div>
 
-        <div id="global-modal" class="modal-overlay">
-            <div class="modal-container">
-                <div class="modal-header"><h2 id="modal-title"></h2></div>
-                <div class="modal-body"><p id="modal-message"></p></div>
-                <div class="modal-footer">
-                    <button id="modal-cancel" class="btn secondary">CANCELAR</button>
-                    <button id="modal-confirm" class="btn primary">CONFIRMAR</button>
+            <div id="global-modal" class="modal-overlay">
+                <div class="modal-container">
+                    <div class="modal-header"><h2 id="modal-title"></h2></div>
+                    <div class="modal-body"><p id="modal-message"></p></div>
+                    <div class="modal-footer">
+                        <button id="modal-cancel" class="btn secondary">CANCELAR</button>
+                        <button id="modal-confirm" class="btn primary">CONFIRMAR</button>
+                    </div>
                 </div>
             </div>
         </div>

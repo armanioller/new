@@ -58,7 +58,7 @@ export class UIManager {
                 this.elements.tabContents.forEach(c => c.classList.remove('active'));
                 btn.classList.add('active');
                 const targetId = btn.getAttribute('data-tab');
-                const target = document.getElementById(targetId);
+                const target = targetId ? document.getElementById(targetId) : null;
                 if (target) {
                     target.classList.add('active');
                     if (targetId === 'tab-personagem') {

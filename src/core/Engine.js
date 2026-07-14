@@ -5,6 +5,11 @@ export class Engine {
         this.scene = new THREE.Scene();
         this.canvas = document.querySelector(canvasId);
 
+        if (!this.canvas) {
+            console.error(`Engine Error: Canvas element with selector "${canvasId}" not found.`);
+            return;
+        }
+
         this.renderer = new THREE.WebGLRenderer({
             canvas: this.canvas,
             antialias: true
@@ -18,9 +23,8 @@ export class Engine {
 
         window.addEventListener('resize', () => this.onResize());
 
-        // Track UI interaction to prevent slider fighting
-        const uiLayer = document.getElementById('ui-layer');
-        uiLayer.addEventListener('mousedown', () => this.isInteractingWithUI = true);
+        // Track UI interaction broadly on the document if needed,
+        // or let UIManager handle it specifically.
         window.addEventListener('mouseup', () => this.isInteractingWithUI = false);
     }
 
@@ -29,10 +33,14 @@ export class Engine {
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
         }
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        if (this.renderer) {
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+        }
     }
 
     render(camera) {
-        this.renderer.render(this.scene, camera);
+        if (this.renderer && camera) {
+            this.renderer.render(this.scene, camera);
+        }
     }
 }

@@ -125,3 +125,9 @@ body { overflow: hidden; background: #000; font-family: 'Inter', sans-serif; col
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #000; }
 ::-webkit-scrollbar-thumb { background: #222; border: 1px solid #333; }
+
+#ui-layer {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 100;
+}
+#ui-layer > * { pointer-events: auto; }

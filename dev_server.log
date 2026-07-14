@@ -3,8 +3,8 @@
 > vite
 
 
-  VITE v6.4.3  ready in 529 ms
+  VITE v6.4.3  ready in 572 ms
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
-11:42:04 PM [vite] (client) page reload src/ui/UIManager.js
+2:05:53 AM [vite] (client) hmr update /style.css?direct
